@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -122,11 +123,17 @@ const createApp = () => {
   app.use('/api/users', userRoutes);
   app.use('/api/platform-admin', platformAdminRoutes);
 
-  app.use((req, res) => {
-    res.status(404).json({
-      error: 'Route not found.',
-      request_id: req.id,
-    });
+  // Serve frontend static files in production
+  const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
+  app.use(express.static(frontendDist));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({
+        error: 'Route not found.',
+        request_id: req.id,
+      });
+    }
+    res.sendFile(path.join(frontendDist, 'index.html'));
   });
 
   app.use((err, req, res, next) => {

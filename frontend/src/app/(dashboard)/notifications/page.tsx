@@ -149,6 +149,7 @@ export default function NotificationsPage() {
   };
 
   const alerts = data?.alerts || [];
+  const recentActivity = (data?.recent_activity || []).slice(0, 4);
   const filteredAlerts = alerts.filter((alert) => {
     if (severityFilter !== 'all' && alert.severity !== severityFilter) {
       return false;
@@ -385,12 +386,12 @@ export default function NotificationsPage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              {(data?.recent_activity || []).length === 0 ? (
+              {recentActivity.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-brand-500">
                   New payments and system notifications will appear here as activity comes in.
                 </p>
               ) : (
-                data?.recent_activity.map((item) => {
+                recentActivity.map((item) => {
                   const Icon = categoryIcons[item.category];
 
                   return (

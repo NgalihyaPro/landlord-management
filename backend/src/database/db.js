@@ -74,4 +74,31 @@ const testConnection = async () => {
   }
 };
 
-module.exports = { pool, testConnection };
+const ensureTenantBillingColumns = async () => {
+  await pool.query('ALTER TABLE tenants ADD COLUMN IF NOT EXISTS months_rented INTEGER NOT NULL DEFAULT 1');
+  await pool.query('ALTER TABLE tenants ADD COLUMN IF NOT EXISTS required_amount NUMERIC(12, 2) NOT NULL DEFAULT 0');
+  await pool.query(
+    `UPDATE tenants
+     SET months_rented = 1
+     WHERE months_rented IS NULL OR months_rented < 1`
+  );
+  await pool.query(
+    `UPDATE tenants
+     SET required_amount = ROUND((COALESCE(monthly_rent, 0) * COALESCE(months_rented, 1))::numeric, 2)
+     WHERE required_amount IS NULL OR required_amount <= 0`
+  );
+  await pool.query(
+    `UPDATE tenants t
+     SET outstanding_balance = GREATEST(
+       0,
+       t.required_amount - COALESCE((
+         SELECT SUM(pay.amount_paid)
+         FROM payments pay
+         WHERE pay.tenant_id = t.id
+           AND pay.organization_id = t.organization_id
+       ), 0)
+     )`
+  );
+};
+
+module.exports = { pool, testConnection, ensureTenantBillingColumns };

@@ -18,6 +18,7 @@ type TenantOption = {
   property_name: string;
   unit_number: string;
   monthly_rent: number;
+  required_amount: number;
   outstanding_balance: number;
   payment_status: string;
 };
@@ -29,6 +30,11 @@ type PaymentMethod = {
 
 const getTenantLabel = (tenant: TenantOption) =>
   `${tenant.full_name} (${tenant.property_name} - Unit ${tenant.unit_number})`;
+
+const toSafeNumber = (value: unknown) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : 0;
+};
 
 export default function RecordPaymentPage() {
   const navigate = useNavigate();
@@ -98,19 +104,40 @@ export default function RecordPaymentPage() {
     });
   }, [tenantSearch, tenants]);
 
-  const selectTenant = (tenant: TenantOption) => {
-    const suggestedAmount = Number(tenant.outstanding_balance) > 0
-      ? Number(tenant.outstanding_balance)
-      : Number(tenant.monthly_rent);
-
+  const selectTenant = async (tenant: TenantOption) => {
+    const fallbackBalance = Math.max(toSafeNumber(tenant.outstanding_balance), 0);
     setSelectedTenantInfo(tenant);
     setTenantSearch(getTenantLabel(tenant));
     setIsTenantDropdownOpen(false);
     setFormData((prev) => ({
       ...prev,
       tenant_id: tenant.id.toString(),
-      amount_paid: suggestedAmount.toString(),
+      amount_paid: fallbackBalance > 0 ? fallbackBalance.toString() : '',
     }));
+
+    try {
+      const { data } = await api.get(`/tenants/${tenant.id}`);
+      const paymentHistory = Array.isArray(data.payment_history) ? data.payment_history : [];
+      const totalPaid = paymentHistory.reduce((sum: number, payment: any) => sum + toSafeNumber(payment.amount_paid), 0);
+      const requiredAmount = toSafeNumber(data.required_amount) || toSafeNumber(data.monthly_rent);
+      const refreshedBalance = Math.max(0, requiredAmount - totalPaid);
+
+      const refreshedTenant: TenantOption = {
+        ...tenant,
+        monthly_rent: toSafeNumber(data.monthly_rent) || toSafeNumber(tenant.monthly_rent),
+        required_amount: requiredAmount,
+        outstanding_balance: refreshedBalance,
+      };
+
+      setSelectedTenantInfo(refreshedTenant);
+      setFormData((prev) => ({
+        ...prev,
+        amount_paid: refreshedBalance > 0 ? refreshedBalance.toString() : '',
+      }));
+    } catch (error) {
+      console.error('Failed to load tenant payment totals:', error);
+      toast.error('Failed to load the latest tenant balance due.');
+    }
   };
 
   useEffect(() => {
@@ -118,7 +145,7 @@ export default function RecordPaymentPage() {
 
     const matchedTenant = tenants.find((tenant) => tenant.id.toString() === tenantIdFromFlow);
     if (matchedTenant) {
-      selectTenant(matchedTenant);
+      void selectTenant(matchedTenant);
     }
   }, [tenantIdFromFlow, tenants, selectedTenantInfo]);
 
@@ -129,9 +156,9 @@ export default function RecordPaymentPage() {
     if (selectedTenantInfo && value !== getTenantLabel(selectedTenantInfo)) {
       setSelectedTenantInfo(null);
       setFormData((prev) => ({
-        ...prev,
-        tenant_id: '',
-        amount_paid: '',
+      ...prev,
+      tenant_id: '',
+      amount_paid: '',
       }));
     }
   };
@@ -226,8 +253,8 @@ export default function RecordPaymentPage() {
                           <p className="text-xs text-brand-500">{tenant.property_name} - Unit {tenant.unit_number}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-xs font-semibold text-brand-500 uppercase">Balance</p>
-                          <p className="text-sm font-bold text-danger">{formatCurrency(Number(tenant.outstanding_balance))}</p>
+                          <p className="text-xs font-semibold text-brand-500 uppercase">Balance Due</p>
+                          <p className="text-sm font-bold text-danger">{formatCurrency(toSafeNumber(tenant.outstanding_balance))}</p>
                         </div>
                       </button>
                     ))
@@ -244,16 +271,16 @@ export default function RecordPaymentPage() {
               <div>
                 <p className="text-xs text-brand-500 font-semibold uppercase">Expected Monthly Rent</p>
                 <p className="font-bold text-brand-900 dark:text-white text-lg">
-                  {formatCurrency(Number(selectedTenantInfo.monthly_rent))}
+                  {formatCurrency(toSafeNumber(selectedTenantInfo.monthly_rent))}
                 </p>
                 <p className="text-xs text-brand-500 mt-1">
                   {selectedTenantInfo.property_name} - Unit {selectedTenantInfo.unit_number}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-danger font-semibold uppercase">Outstanding Balance</p>
+                <p className="text-xs text-danger font-semibold uppercase">Balance Due</p>
                 <p className="font-bold text-danger text-lg">
-                  {formatCurrency(Number(selectedTenantInfo.outstanding_balance))}
+                  {formatCurrency(toSafeNumber(selectedTenantInfo.outstanding_balance))}
                 </p>
               </div>
             </div>
@@ -263,7 +290,7 @@ export default function RecordPaymentPage() {
             <div className="space-y-1">
               <label className="text-xs font-semibold text-brand-500 uppercase flex gap-2">
                 <CurrencyDollarIcon className="h-4 w-4 text-success" />
-                Amount Paid *
+                Payment Received *
               </label>
               <input
                 required

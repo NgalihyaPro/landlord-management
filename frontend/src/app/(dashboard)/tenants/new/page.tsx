@@ -98,8 +98,6 @@ export default function AddTenantPage() {
         lease_start: formData.lease_start_date,
         lease_end: formData.lease_end_date,
         next_due_date: formData.lease_start_date,
-        deposit_amount: 0,
-        deposit_paid: 0
       };
 
       const { data } = await api.post('/tenants', payload);

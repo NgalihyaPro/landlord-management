@@ -118,9 +118,20 @@ const create = async (req, res) => {
     }
 
     const tenant = tenants[0];
-    const amountDue = Number(tenant.monthly_rent);
+    const tenantRequiredAmount = Number(
+      tenant.required_amount || (Number(tenant.monthly_rent) * Number(tenant.months_rented || 1))
+    );
+    const [[paymentTotals]] = await conn.execute(
+      `SELECT COALESCE(SUM(amount_paid), 0) as total_paid
+       FROM payments
+       WHERE tenant_id = ? AND organization_id = ?`,
+      [tenant_id, req.user.organization_id]
+    );
+    const totalPaidBefore = Number(paymentTotals.total_paid || 0);
+    const amountDue = Math.max(0, tenantRequiredAmount - totalPaidBefore);
     const amountPaid = Number(amount_paid);
-    const balance = Math.max(0, amountDue - amountPaid);
+    const totalPaidAfter = totalPaidBefore + amountPaid;
+    const balance = Math.max(0, tenantRequiredAmount - totalPaidAfter);
     const receiptNum = `RCP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     const payDate = new Date(payment_date);
@@ -174,7 +185,7 @@ const create = async (req, res) => {
         'payment_received',
         `Payment Received - ${tenant.full_name}`,
         `TZS ${amountPaid.toLocaleString()} received from ${tenant.full_name}. ${
-          balance > 0 ? `Balance: TZS ${balance.toLocaleString()}` : 'Fully paid.'
+          balance > 0 ? `Balance due: TZS ${balance.toLocaleString()}` : 'Fully paid.'
         }`,
       ]
     );

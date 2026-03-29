@@ -84,7 +84,7 @@ export const translations = {
         tenant_property: 'Mpangaji na Jengo',
         date_paid: 'Tarehe ya Malipo',
         method: 'Njia',
-        amount_paid: 'Kiasi Kilicholipwa',
+        amount_paid: 'Malipo Yaliyopokelewa',
         balance: 'Salio',
         status: 'Hali'
       }
@@ -175,7 +175,7 @@ export const translations = {
         tenant_property: 'Tenant & Property',
         date_paid: 'Date Paid',
         method: 'Method',
-        amount_paid: 'Amount Paid',
+        amount_paid: 'Payment Received',
         balance: 'Balance',
         status: 'Status'
       }

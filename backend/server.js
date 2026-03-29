@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
-const { pool, testConnection } = require('./src/database/db');
+const { pool, testConnection, ensureTenantBillingColumns } = require('./src/database/db');
 const { createRequestId } = require('./src/utils/auth.utils');
 const { requireCsrf } = require('./src/middleware/csrf.middleware');
 
@@ -176,6 +176,7 @@ const scheduleJobs = () => {
 
 const start = async () => {
   await testConnection();
+  await ensureTenantBillingColumns();
   scheduleJobs();
 
   const app = createApp();

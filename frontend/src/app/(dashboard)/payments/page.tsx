@@ -94,7 +94,7 @@ export default function PaymentsPage() {
 
     const headers = [
       'Receipt Number', 'Tenant Name', 'Property Name', 'Unit Number',
-      'Payment Date', 'Payment Method', 'Reference Number', 'Amount Paid', 'Balance', 'Payment Status',
+      'Payment Date', 'Payment Method', 'Reference Number', 'Payment Received', 'Balance', 'Payment Status',
     ];
 
     const rows = filteredPayments.map((payment: any) => [

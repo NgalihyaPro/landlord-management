@@ -144,12 +144,11 @@ const create = async (req, res) => {
       lease_end,
       next_due_date,
       monthly_rent,
-      deposit_amount,
-      deposit_paid,
+      months_rented,
       notes,
     } = req.body;
 
-    if (!full_name || !phone || !unit_id || !property_id || !lease_start || !next_due_date || !monthly_rent) {
+    if (!full_name || !phone || !unit_id || !property_id || !lease_start || !next_due_date || !monthly_rent || !months_rented) {
       await conn.rollback();
       return res.status(400).json({ error: 'Required fields missing.' });
     }
@@ -171,13 +170,15 @@ const create = async (req, res) => {
       return res.status(400).json({ error: 'Unit is already occupied.' });
     }
 
-    const balance = Number(monthly_rent) - Number(deposit_paid || 0);
+    const totalRequiredAmount = Number(monthly_rent) * Number(months_rented);
+    const openingBalance = Math.max(0, totalRequiredAmount);
+
     const [result] = await conn.execute(
       `INSERT INTO tenants (
         organization_id, unit_id, property_id, full_name, phone, email, national_id,
         emergency_contact_name, emergency_contact_phone, lease_start, lease_end, next_due_date,
-        monthly_rent, deposit_amount, deposit_paid, outstanding_balance, payment_status, notes
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        monthly_rent, months_rented, required_amount, deposit_amount, deposit_paid, outstanding_balance, payment_status, notes
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         req.user.organization_id,
         unit_id,
@@ -192,9 +193,11 @@ const create = async (req, res) => {
         lease_end || null,
         next_due_date,
         monthly_rent,
-        deposit_amount || 0,
-        deposit_paid || 0,
-        balance > 0 ? balance : 0,
+        Number(months_rented),
+        totalRequiredAmount,
+        0,
+        0,
+        openingBalance,
         'unpaid',
         notes || null,
       ]
@@ -235,11 +238,30 @@ const update = async (req, res) => {
       monthly_rent,
     } = req.body;
 
+    const [tenantRows] = await pool.execute(
+      'SELECT id, months_rented FROM tenants WHERE id = ? AND organization_id = ?',
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!tenantRows.length) {
+      return res.status(404).json({ error: 'Tenant not found.' });
+    }
+
+    const monthsRented = Number(tenantRows[0].months_rented || 1);
+    const nextRequiredAmount = Number(monthly_rent) * monthsRented;
+    const [[paymentTotals]] = await pool.execute(
+      `SELECT COALESCE(SUM(amount_paid), 0) as total_paid
+       FROM payments
+       WHERE tenant_id = ? AND organization_id = ?`,
+      [req.params.id, req.user.organization_id]
+    );
+    const recomputedBalance = Math.max(0, nextRequiredAmount - Number(paymentTotals.total_paid || 0));
+
     const [result] = await pool.execute(
       `UPDATE tenants
        SET full_name = ?, phone = ?, email = ?, national_id = ?,
            emergency_contact_name = ?, emergency_contact_phone = ?, lease_end = ?, notes = ?,
-           monthly_rent = ?, updated_at = NOW()
+           monthly_rent = ?, required_amount = ?, outstanding_balance = ?, updated_at = NOW()
        WHERE id = ? AND organization_id = ?`,
       [
         full_name,
@@ -251,6 +273,8 @@ const update = async (req, res) => {
         lease_end || null,
         notes,
         monthly_rent,
+        nextRequiredAmount,
+        recomputedBalance,
         req.params.id,
         req.user.organization_id,
       ]

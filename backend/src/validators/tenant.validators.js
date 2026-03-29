@@ -13,8 +13,7 @@ const createTenantValidation = [
   body('lease_end').optional({ values: 'falsy' }).isISO8601().withMessage('Lease end date is invalid.'),
   body('next_due_date').isISO8601().withMessage('Next due date is invalid.'),
   body('monthly_rent').isFloat({ min: 0 }).withMessage('Monthly rent must be 0 or more.').toFloat(),
-  body('deposit_amount').optional({ values: 'falsy' }).isFloat({ min: 0 }).withMessage('Deposit amount must be 0 or more.').toFloat(),
-  body('deposit_paid').optional({ values: 'falsy' }).isFloat({ min: 0 }).withMessage('Deposit paid must be 0 or more.').toFloat(),
+  body('months_rented').isInt({ min: 1 }).withMessage('Months rented must be at least 1.').toInt(),
   body('notes').optional({ values: 'falsy' }).trim().isLength({ max: 2000 }),
 ];
 

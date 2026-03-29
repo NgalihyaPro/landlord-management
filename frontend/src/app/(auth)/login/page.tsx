@@ -206,17 +206,6 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setEmail('admin@landlordpro.com');
-                    setPassword('Admin123!');
-                    setErrorMessage('');
-                  }}
-                  className="rounded-lg bg-brand-100 px-3 py-1.5 text-xs font-bold text-brand-700 transition-colors hover:bg-brand-200 dark:bg-brand-800 dark:text-brand-300 dark:hover:bg-brand-700"
-                >
-                  Auto-fill Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
                     setEmail('manager@landlordpro.com');
                     setPassword('Manager123!');
                     setErrorMessage('');

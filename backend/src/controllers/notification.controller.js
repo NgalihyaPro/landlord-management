@@ -357,13 +357,14 @@ const getAll = async (req, res) => {
     ]);
 
     const activityAlerts = buildActivityAlerts(activityRows);
-    const summary = buildSummary([...monitoredAlerts, ...activityAlerts]);
+    const summary = buildSummary(monitoredAlerts);
 
     res.json({
       unread: monitoredAlerts.length,
       summary: {
         ...summary,
         active: monitoredAlerts.length,
+        recent_activity_count: activityAlerts.length,
       },
       alerts: monitoredAlerts,
       recent_activity: activityAlerts,

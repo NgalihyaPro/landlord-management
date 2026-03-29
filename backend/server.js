@@ -135,6 +135,19 @@ const createApp = () => {
     }
   });
 
+  app.get('/api/test-sms', async (req, res) => {
+    try {
+      const { sendSMS } = require('./src/services/sms.service');
+      const result = await sendSMS(
+        '+255713384932',
+        'LandlordPro TEST: SMS alerts are working correctly!'
+      );
+      res.json({ success: true, result });
+    } catch (err) {
+      res.json({ success: false, error: err.message });
+    }
+  });
+
   app.use('/api/auth', authRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/properties', propertyRoutes);

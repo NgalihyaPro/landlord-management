@@ -95,7 +95,7 @@ const create = async (req, res) => {
     res.status(201).json({
       id: result.insertId,
       message: 'Invitation email sent successfully.',
-      setup_link: process.env.NODE_ENV === 'production' ? undefined : setupLink,
+      setup_link: setupLink,
       invite_expires_at: expiresAt.toISOString(),
     });
   } catch (err) {

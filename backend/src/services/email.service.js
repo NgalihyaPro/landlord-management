@@ -14,7 +14,7 @@ const isEmailConfigured = () =>
   );
 
 const isEmailDeliveryRequired = () =>
-  process.env.EMAIL_DELIVERY_REQUIRED === 'true' || IS_PRODUCTION;
+  process.env.EMAIL_DELIVERY_REQUIRED === 'true';
 
 const getFromAddress = () => {
   const email = process.env.SMTP_FROM_EMAIL;

@@ -44,7 +44,7 @@ const createOwnerInvite = async (req, res) => {
 
     res.status(201).json({
       message: 'Owner registration email sent successfully.',
-      invite_link: process.env.NODE_ENV === 'production' ? undefined : inviteLink,
+      invite_link: inviteLink,
       expires_at: expiresAt.toISOString(),
     });
   } catch (error) {

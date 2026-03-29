@@ -7,6 +7,7 @@ const LOW_OCCUPANCY_THRESHOLD = 0.6;
 const toNumber = (value) => Number(value || 0);
 
 const buildTenantActionUrl = (tenantId) => (tenantId ? `/tenants/${tenantId}` : '/tenants');
+const buildLeaseActionUrl = (tenantId) => (tenantId ? `/tenants/${tenantId}?focus=lease` : '/tenants');
 const buildPropertyActionUrl = (propertyId) => (propertyId ? `/properties/${propertyId}` : '/properties');
 
 const getAlertSeverity = (daysRemaining) => {
@@ -100,7 +101,7 @@ const buildLeaseAlerts = (rows) =>
         ? `Lease ended on ${row.lease_end}. Follow up for renewal, move-out, or handover.`
         : `Lease ends on ${row.lease_end}, which is in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}.`,
       action_label: 'Review lease',
-      action_url: buildTenantActionUrl(row.id),
+      action_url: buildLeaseActionUrl(row.id),
       created_at: row.lease_end,
       due_date: row.lease_end,
       tenant: {

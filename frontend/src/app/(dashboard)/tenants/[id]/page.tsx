@@ -1,27 +1,106 @@
-import { useEffect, useState } from 'react';
-import api from '@/lib/api';
+import { useEffect, useMemo, useState } from 'react';
+import api, { getApiErrorMessage, invalidateGetCache } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
-import { UserCircleIcon, PhoneIcon, MapPinIcon, ArrowLeftIcon, BanknotesIcon, CreditCardIcon } from '@heroicons/react/24/outline';
-import { Link, useParams } from 'react-router-dom';
+import {
+  ArrowLeftIcon,
+  BanknotesIcon,
+  CalendarDaysIcon,
+  CheckIcon,
+  CreditCardIcon,
+  MapPinIcon,
+  PhoneIcon,
+} from '@heroicons/react/24/outline';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+
+const formatDateInputValue = (value?: string | null) => {
+  if (!value) return '';
+  return new Date(value).toISOString().slice(0, 10);
+};
+
+const getLeaseStatus = (leaseEnd?: string | null) => {
+  if (!leaseEnd) {
+    return { label: 'No lease end date', tone: 'text-brand-500', daysRemaining: null };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(leaseEnd);
+  endDate.setHours(0, 0, 0, 0);
+
+  const daysRemaining = Math.round((endDate.getTime() - today.getTime()) / 86400000);
+
+  if (daysRemaining < 0) {
+    return { label: `${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) === 1 ? '' : 's'} overdue`, tone: 'text-danger', daysRemaining };
+  }
+
+  if (daysRemaining <= 30) {
+    return { label: `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`, tone: 'text-warning', daysRemaining };
+  }
+
+  return { label: `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`, tone: 'text-success', daysRemaining };
+};
 
 export default function TenantProfilePage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [extendLeaseOpen, setExtendLeaseOpen] = useState(searchParams.get('focus') === 'lease');
+  const [leaseEndInput, setLeaseEndInput] = useState('');
+  const [leaseSaving, setLeaseSaving] = useState(false);
+
+  const fetchTenant = async () => {
+    try {
+      const { data } = await api.get(`/tenants/${id}`);
+      setTenant(data);
+      setLeaseEndInput(formatDateInputValue(data.lease_end));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchTenant = async () => {
-      try {
-        const { data } = await api.get(`/tenants/${id}`);
-        setTenant(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTenant();
+    void fetchTenant();
   }, [id]);
+
+  useEffect(() => {
+    if (searchParams.get('focus') === 'lease') {
+      setExtendLeaseOpen(true);
+    }
+  }, [searchParams]);
+
+  const leaseStatus = useMemo(() => getLeaseStatus(tenant?.lease_end), [tenant?.lease_end]);
+
+  const handleExtendLease = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!leaseEndInput) {
+      toast.error('Choose a new lease end date.');
+      return;
+    }
+
+    setLeaseSaving(true);
+
+    try {
+      await api.put(`/tenants/${id}/extend-lease`, { lease_end: leaseEndInput });
+      invalidateGetCache('/tenants');
+      invalidateGetCache(`/tenants/${id}`);
+      invalidateGetCache('/dashboard');
+      invalidateGetCache('/notifications');
+      invalidateGetCache('/reports');
+      await fetchTenant();
+      toast.success('Lease extended. Notifications will clear on the next alerts refresh.');
+      setExtendLeaseOpen(false);
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to extend lease.'));
+    } finally {
+      setLeaseSaving(false);
+    }
+  };
 
   if (loading) return <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mt-20"></div>;
   if (!tenant) return <div className="text-center mt-20 font-semibold text-brand-500">Tenant not found.</div>;
@@ -38,12 +117,10 @@ export default function TenantProfilePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Profile Card */}
         <div className="md:col-span-1 space-y-6">
           <div className="glass-panel p-6 rounded-2xl relative overflow-hidden">
             <div className={`absolute top-0 left-0 right-0 h-1.5 ${getStatusColor(tenant.payment_status).split(' ')[0]}`} />
-            
+
             <div className="flex flex-col items-center text-center mt-2 mb-6">
               <div className="h-20 w-20 bg-brand-100 dark:bg-brand-800 rounded-full flex items-center justify-center text-primary text-3xl font-bold mb-3 shadow-inner">
                 {tenant.full_name.charAt(0)}
@@ -74,7 +151,7 @@ export default function TenantProfilePage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Rent</p>
@@ -103,34 +180,101 @@ export default function TenantProfilePage() {
           </div>
         </div>
 
-        {/* Payment History */}
         <div className="md:col-span-2 space-y-6">
+          <div className="glass-panel rounded-2xl overflow-hidden">
+            <div className="p-5 border-b border-border/50 bg-brand-50/50 dark:bg-brand-800/50 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CalendarDaysIcon className="h-6 w-6 text-primary" />
+                <div>
+                  <h3 className="text-lg font-bold text-brand-900 dark:text-white">Lease Review</h3>
+                  <p className="text-sm text-brand-500">Extend the lease here when an alert sends you to review this tenant.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setExtendLeaseOpen((current) => !current)}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+              >
+                {extendLeaseOpen ? 'Close' : 'Extend lease'}
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">Lease Start</p>
+                  <p className="mt-2 font-bold text-brand-900 dark:text-white">{formatDate(tenant.lease_start)}</p>
+                </div>
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">Current Lease End</p>
+                  <p className="mt-2 font-bold text-brand-900 dark:text-white">{tenant.lease_end ? formatDate(tenant.lease_end) : 'Not set'}</p>
+                </div>
+                <div className="rounded-xl border border-border p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">Lease Status</p>
+                  <p className={`mt-2 font-bold ${leaseStatus.tone}`}>{leaseStatus.label}</p>
+                </div>
+              </div>
+
+              {extendLeaseOpen && (
+                <form onSubmit={handleExtendLease} className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wider text-brand-500">New lease end date</label>
+                    <input
+                      type="date"
+                      value={leaseEndInput}
+                      onChange={(event) => setLeaseEndInput(event.target.value)}
+                      min={tenant.lease_end ? formatDateInputValue(tenant.lease_end) : formatDateInputValue(tenant.lease_start)}
+                      className="mt-2 w-full rounded-lg border border-brand-200 bg-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:border-primary focus:ring-1 dark:border-brand-700 dark:bg-brand-900/60"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-brand-500">
+                      Saving a later end date resolves the lease deadline alert the next time Notifications refreshes.
+                    </p>
+                    <button
+                      type="submit"
+                      disabled={leaseSaving}
+                      className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-success/90 disabled:opacity-70"
+                    >
+                      {leaseSaving ? (
+                        <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      ) : (
+                        <CheckIcon className="h-4 w-4" />
+                      )}
+                      Save lease extension
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+
           <div className="glass-panel rounded-2xl overflow-hidden">
             <div className="p-5 border-b border-border/50 bg-brand-50/50 dark:bg-brand-800/50 flex items-center gap-3">
               <BanknotesIcon className="h-6 w-6 text-primary" />
               <h3 className="text-lg font-bold text-brand-900 dark:text-white">Payment History</h3>
             </div>
-            
+
             <div className="p-0">
               {tenant.payment_history && tenant.payment_history.length > 0 ? (
                 <div className="divide-y divide-border/50">
-                  {tenant.payment_history.map((p: any) => (
-                    <div key={p.id} className="p-4 sm:p-5 hover:bg-brand-50/30 dark:hover:bg-brand-800/30 transition-colors flex flex-wrap gap-4 justify-between items-center">
+                  {tenant.payment_history.map((payment: any) => (
+                    <div key={payment.id} className="p-4 sm:p-5 hover:bg-brand-50/30 dark:hover:bg-brand-800/30 transition-colors flex flex-wrap gap-4 justify-between items-center">
                       <div className="flex items-center gap-3">
                         <div className="bg-success/10 p-2 rounded-lg text-success">
                           <CreditCardIcon className="h-5 w-5" />
                         </div>
                         <div>
                           <p className="font-bold text-brand-900 dark:text-white text-sm">Rent Payment</p>
-                          <p className="text-xs text-brand-500 font-mono mt-0.5">{p.receipt_number}</p>
+                          <p className="text-xs text-brand-500 font-mono mt-0.5">{payment.receipt_number}</p>
                         </div>
                       </div>
-                      
+
                       <div className="text-right">
-                        <p className="font-bold text-success text-base">+{formatCurrency(p.amount_paid)}</p>
-                        <p className="text-xs text-brand-500 font-medium mt-0.5">{formatDate(p.payment_date)}</p>
+                        <p className="font-bold text-success text-base">+{formatCurrency(payment.amount_paid)}</p>
+                        <p className="text-xs text-brand-500 font-medium mt-0.5">{formatDate(payment.payment_date)}</p>
                       </div>
-                      
+
                       <div className="w-full sm:w-auto text-center sm:text-right">
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-success/20 bg-success/10 text-success inline-block">
                           Completed

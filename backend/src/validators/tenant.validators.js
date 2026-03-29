@@ -31,7 +31,13 @@ const updateTenantValidation = [
   body('monthly_rent').isFloat({ min: 0 }).withMessage('Monthly rent must be 0 or more.').toFloat(),
 ];
 
+const extendLeaseValidation = [
+  param('id').isInt({ min: 1 }).withMessage('Tenant id is invalid.').toInt(),
+  body('lease_end').isISO8601().withMessage('New lease end date is invalid.'),
+];
+
 module.exports = {
   createTenantValidation,
   updateTenantValidation,
+  extendLeaseValidation,
 };

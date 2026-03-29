@@ -272,6 +272,61 @@ const update = async (req, res) => {
   }
 };
 
+const extendLease = async (req, res) => {
+  try {
+    const leaseEnd = req.body.lease_end;
+
+    const [tenants] = await pool.execute(
+      `SELECT id, full_name, lease_start, lease_end
+       FROM tenants
+       WHERE id = ? AND organization_id = ? AND is_active = TRUE`,
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!tenants.length) {
+      return res.status(404).json({ error: 'Tenant not found.' });
+    }
+
+    const tenant = tenants[0];
+    const nextLeaseEnd = new Date(leaseEnd);
+    const currentLeaseEnd = tenant.lease_end ? new Date(tenant.lease_end) : null;
+    const leaseStart = new Date(tenant.lease_start);
+
+    if (Number.isNaN(nextLeaseEnd.getTime())) {
+      return res.status(400).json({ error: 'New lease end date is invalid.' });
+    }
+
+    if (nextLeaseEnd <= leaseStart) {
+      return res.status(400).json({ error: 'New lease end date must be after the lease start date.' });
+    }
+
+    if (currentLeaseEnd && nextLeaseEnd <= currentLeaseEnd) {
+      return res.status(400).json({ error: 'New lease end date must be later than the current lease end date.' });
+    }
+
+    const [result] = await pool.execute(
+      `UPDATE tenants
+       SET lease_end = ?, updated_at = NOW()
+       WHERE id = ? AND organization_id = ?`,
+      [leaseEnd, req.params.id, req.user.organization_id]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ error: 'Tenant not found.' });
+    }
+
+    await pool.execute(
+      'INSERT INTO audit_logs (organization_id, user_id, action, table_name, record_id) VALUES (?,?,?,?,?)',
+      [req.user.organization_id, req.user.id, 'EXTEND_LEASE', 'tenants', req.params.id]
+    );
+
+    res.json({ message: `Lease for ${tenant.full_name} extended successfully.`, lease_end: leaseEnd });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to extend lease.' });
+  }
+};
+
 const remove = async (req, res) => {
   const conn = await pool.getConnection();
   try {
@@ -315,4 +370,4 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getOne, create, update, remove, autoUpdateTenantStatuses };
+module.exports = { getAll, getOne, create, update, extendLease, remove, autoUpdateTenantStatuses };

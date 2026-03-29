@@ -14,6 +14,7 @@ import {
   WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
 import api, { cachedGet, getApiErrorMessage, invalidateGetCache } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -116,6 +117,7 @@ const summaryCards = [
 ] as const;
 
 export default function NotificationsPage() {
+  const { user } = useAuth();
   const [data, setData] = useState<AlertsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
@@ -193,6 +195,7 @@ export default function NotificationsPage() {
 
   const alerts = data?.alerts || [];
   const recentActivity = (data?.recent_activity || []).slice(0, 4);
+  const hasSmsPhone = Boolean(user?.phone?.trim());
   const filteredAlerts = alerts.filter((alert) => {
     if (severityFilter !== 'all' && alert.severity !== severityFilter) {
       return false;
@@ -251,6 +254,17 @@ export default function NotificationsPage() {
           </div>
         </div>
       </section>
+
+      {!hasSmsPhone && (
+        <section className="rounded-2xl border border-warning/40 bg-warning/10 px-5 py-4">
+          <p className="text-sm font-medium text-brand-800 dark:text-brand-100">
+            Add your phone number in Profile Settings to receive SMS alerts on your phone.
+          </p>
+          <Link to="/settings" className="mt-2 inline-flex text-sm font-semibold text-warning hover:underline">
+            Open profile settings
+          </Link>
+        </section>
+      )}
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (

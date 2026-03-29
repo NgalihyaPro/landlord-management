@@ -112,4 +112,25 @@ const ensurePropertyLandlordColumn = async () => {
   );
 };
 
-module.exports = { pool, testConnection, ensureTenantBillingColumns, ensurePropertyLandlordColumn };
+const ensureSmsAlertColumns = async () => {
+  await pool.query(
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20)'
+  );
+  await pool.query(
+    'ALTER TABLE tenants ADD COLUMN IF NOT EXISTS lease_end_date DATE'
+  );
+  await pool.query(
+    `UPDATE tenants
+     SET lease_end_date = lease_end
+     WHERE lease_end_date IS NULL AND lease_end IS NOT NULL`
+  );
+  await ensurePropertyLandlordColumn();
+};
+
+module.exports = {
+  pool,
+  testConnection,
+  ensureTenantBillingColumns,
+  ensurePropertyLandlordColumn,
+  ensureSmsAlertColumns,
+};

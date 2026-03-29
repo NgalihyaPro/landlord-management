@@ -647,12 +647,22 @@ const logout = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const { full_name, phone } = req.body;
+    const normalizedFullName = full_name?.trim();
+    const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
+
+    if (!normalizedFullName) {
+      return res.status(400).json({ error: 'Full name is required.' });
+    }
+
+    if (normalizedPhone && !/^\+\d{10,}$/.test(normalizedPhone)) {
+      return res.status(400).json({ error: 'Phone number must start with + and include at least 10 digits.' });
+    }
 
     await pool.execute(
       `UPDATE users
        SET full_name = ?, phone = ?, updated_at = NOW()
        WHERE id = ? AND organization_id = ?`,
-      [full_name.trim(), phone || null, req.user.id, req.user.organization_id]
+      [normalizedFullName, normalizedPhone || null, req.user.id, req.user.organization_id]
     );
 
     const user = await getUserById(req.user.id);

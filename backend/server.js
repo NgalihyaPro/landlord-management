@@ -6,7 +6,12 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
-const { pool, testConnection, ensureTenantBillingColumns, ensurePropertyLandlordColumn } = require('./src/database/db');
+const {
+  pool,
+  testConnection,
+  ensureTenantBillingColumns,
+  ensureSmsAlertColumns,
+} = require('./src/database/db');
 const { createRequestId } = require('./src/utils/auth.utils');
 const { requireCsrf } = require('./src/middleware/csrf.middleware');
 
@@ -172,19 +177,27 @@ const scheduleJobs = () => {
     try {
       console.log('[cron] Running daily tenant status update');
       await autoUpdateTenantStatuses();
-      console.log('[cron] Running daily landlord SMS alerts');
+    } catch (error) {
+      console.error('[cron] Daily tenant status job failed:', error);
+    }
+  }, { timezone: 'Etc/UTC' });
+
+  // Daily SMS alerts at 8:00 AM Tanzania time (UTC+3 = 05:00 UTC)
+  cron.schedule('0 5 * * *', async () => {
+    try {
+      console.log('[CRON] Running daily SMS alerts...');
       await runDailyAlerts();
     } catch (error) {
-      console.error('[cron] Daily jobs failed:', error);
+      console.error('[CRON] Daily SMS alerts failed:', error);
     }
-  });
+  }, { timezone: 'Etc/UTC' });
   scheduledJobs = true;
 };
 
 const start = async () => {
   await testConnection();
   await ensureTenantBillingColumns();
-  await ensurePropertyLandlordColumn();
+  await ensureSmsAlertColumns();
   scheduleJobs();
 
   const app = createApp();

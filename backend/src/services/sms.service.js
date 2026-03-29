@@ -3,7 +3,7 @@ const https = require('https');
 async function sendSMS(to, message) {
   try {
     const payload = JSON.stringify({
-      source_addr: process.env.BEEM_SENDER_ID || 'LandlordPro',
+      source_addr: process.env.BEEM_SENDER_ID || 'INFO',
       encoding: 0,
       message: message,
       recipients: [{ recipient_id: 1, dest_addr: to }],

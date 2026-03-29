@@ -10,6 +10,8 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 
+const SMS_PHONE_REGEX = /^\+\d{10,}$/;
+
 type OrganizationSettings = {
   business_name: string;
   business_phone: string;
@@ -108,12 +110,17 @@ export default function SettingsPage() {
       toast.error('Full name is required');
       return;
     }
+    const trimmedPhone = profile.phone.trim();
+    if (trimmedPhone && !SMS_PHONE_REGEX.test(trimmedPhone)) {
+      toast.error('SMS alert phone must start with + and include at least 10 digits');
+      return;
+    }
 
     setSavingProfile(true);
     try {
       const { data } = await api.put('/auth/profile', {
         full_name: profile.full_name.trim(),
-        phone: profile.phone.trim(),
+        phone: trimmedPhone,
       });
       setUser(data.user);
       toast.success('Profile updated successfully');
@@ -207,13 +214,18 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Phone</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">SMS alert phone number</label>
                 <input
                   name="phone"
+                  type="tel"
                   value={profile.phone}
                   onChange={handleProfileChange}
+                  placeholder="+255712000000"
                   className="w-full rounded-lg border border-brand-200 bg-white/50 px-4 py-2 text-sm font-medium transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-brand-700 dark:bg-brand-900/50"
                 />
+                <p className="text-xs text-brand-500">
+                  Receive SMS alerts for overdue rent, upcoming rent and lease expiry on this number.
+                </p>
               </div>
             </div>
 

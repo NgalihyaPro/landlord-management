@@ -1,8 +1,9 @@
 const { pool } = require('../database/db');
 const { sendSMS } = require('./sms.service');
 
+const requiredAmountExpression = 'COALESCE(NULLIF(t.required_amount, 0), t.monthly_rent)';
+
 async function runDailyAlerts() {
-  // Get all landlords/admins who have a phone number saved
   const res = await pool.query(
     `SELECT u.id, u.phone
      FROM users u
@@ -31,7 +32,7 @@ async function checkOverdueRent(landlordId, landlordPhone) {
        t.phone,
        u.unit_number,
        p.name AS property_name,
-       (t.required_amount - COALESCE(SUM(pay.amount_paid), 0)) AS balance_due,
+       (${requiredAmountExpression} - COALESCE(SUM(pay.amount_paid), 0)) AS balance_due,
        t.next_due_date AS rent_due_date,
        (CURRENT_DATE - t.next_due_date) AS days_overdue
      FROM tenants t
@@ -44,8 +45,8 @@ async function checkOverdueRent(landlordId, landlordPhone) {
      WHERE t.is_active = TRUE
        AND COALESCE(p.landlord_id, p.owner_id) = $1
        AND t.next_due_date < CURRENT_DATE
-     GROUP BY t.id, t.full_name, t.phone, t.required_amount, t.next_due_date, u.unit_number, p.name
-     HAVING (t.required_amount - COALESCE(SUM(pay.amount_paid), 0)) > 0`,
+     GROUP BY t.id, t.full_name, t.phone, t.required_amount, t.monthly_rent, t.next_due_date, u.unit_number, p.name
+     HAVING (${requiredAmountExpression} - COALESCE(SUM(pay.amount_paid), 0)) > 0`,
     [landlordId]
   );
 
@@ -92,15 +93,15 @@ async function checkLeaseExpiry(landlordId, landlordPhone) {
        t.full_name,
        u.unit_number,
        p.name AS property_name,
-       t.lease_end AS lease_end_date,
-       (t.lease_end - CURRENT_DATE) AS days_remaining
+       COALESCE(t.lease_end_date, t.lease_end) AS lease_end_date,
+       (COALESCE(t.lease_end_date, t.lease_end) - CURRENT_DATE) AS days_remaining
      FROM tenants t
      JOIN units u ON t.unit_id = u.id AND u.organization_id = t.organization_id
      JOIN properties p ON p.id = COALESCE(t.property_id, u.property_id) AND p.organization_id = t.organization_id
      WHERE t.is_active = TRUE
        AND COALESCE(p.landlord_id, p.owner_id) = $1
-       AND t.lease_end IS NOT NULL
-       AND t.lease_end BETWEEN CURRENT_DATE
+       AND COALESCE(t.lease_end_date, t.lease_end) IS NOT NULL
+       AND COALESCE(t.lease_end_date, t.lease_end) BETWEEN CURRENT_DATE
            AND CURRENT_DATE + INTERVAL '30 days'`,
     [landlordId]
   );

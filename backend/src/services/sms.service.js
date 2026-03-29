@@ -19,7 +19,7 @@ async function sendSMS(to, message) {
       path: '/v1/send',
       method: 'POST',
       headers: {
-        Authorization: `Basic ${credentials}`,
+        'Authorization': `Basic ${credentials}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(payload),
       },

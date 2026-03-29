@@ -258,7 +258,7 @@ export default function NotificationsPage() {
       {!hasSmsPhone && (
         <section className="rounded-2xl border border-warning/40 bg-warning/10 px-5 py-4">
           <p className="text-sm font-medium text-brand-800 dark:text-brand-100">
-            Add your phone number in Profile Settings to receive SMS alerts on your phone.
+            Add your phone number in Profile Settings to receive SMS alerts.
           </p>
           <Link to="/settings" className="mt-2 inline-flex text-sm font-semibold text-warning hover:underline">
             Open profile settings

@@ -4,6 +4,8 @@ const { authenticate, isAdmin } = require('../middleware/auth.middleware');
 const { validateRequest } = require('../middleware/validate.middleware');
 const { inviteUserValidation, updateUserValidation } = require('../validators/user.validators');
 
+router.get('/me', authenticate, ctrl.getMe);
+router.put('/profile', authenticate, ctrl.updateProfile);
 router.get('/', authenticate, isAdmin, ctrl.getAll);
 router.post('/', authenticate, isAdmin, inviteUserValidation, validateRequest, ctrl.create);
 router.post('/invite', authenticate, isAdmin, inviteUserValidation, validateRequest, ctrl.create);

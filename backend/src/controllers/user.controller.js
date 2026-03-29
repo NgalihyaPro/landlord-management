@@ -8,6 +8,20 @@ const hashInviteToken = (token) => crypto.createHash('sha256').update(token).dig
 
 const createInviteLink = (token) => buildFrontendUrl(`/setup-account/${token}`);
 
+const getUserById = async (userId, organizationId) => {
+  const [rows] = await pool.execute(
+    `SELECT u.id, u.organization_id, u.full_name, u.email, u.phone, u.avatar,
+            r.name as role, org.name as organization_name
+     FROM users u
+     JOIN roles r ON u.role_id = r.id
+     JOIN organizations org ON u.organization_id = org.id
+     WHERE u.id = ? AND u.organization_id = ?`,
+    [userId, organizationId]
+  );
+
+  return rows[0] || null;
+};
+
 const getAll = async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -151,4 +165,53 @@ const getRoles = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, update, getRoles };
+const getMe = async (req, res) => {
+  try {
+    const user = await getUserById(req.user.id, req.user.organization_id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch user profile.' });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const fullName = req.body.full_name?.trim();
+    const phone = (req.body.phone || '').trim();
+
+    if (!fullName) {
+      return res.status(400).json({ error: 'Full name is required.' });
+    }
+
+    if (phone && !/^\+\d{10,}$/.test(phone)) {
+      return res.status(400).json({ error: 'Phone number must start with + and include at least 10 digits.' });
+    }
+
+    await pool.execute(
+      `UPDATE users
+       SET full_name = ?, phone = ?, updated_at = NOW()
+       WHERE id = ? AND organization_id = ?`,
+      [fullName, phone || null, req.user.id, req.user.organization_id]
+    );
+
+    const user = await getUserById(req.user.id, req.user.organization_id);
+
+    await pool.execute(
+      'INSERT INTO audit_logs (organization_id, user_id, action, table_name, record_id) VALUES (?,?,?,?,?)',
+      [req.user.organization_id, req.user.id, 'UPDATE_PROFILE', 'users', req.user.id]
+    );
+
+    res.json({
+      message: 'Profile updated successfully.',
+      user,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update profile.' });
+  }
+};
+
+module.exports = { getAll, create, update, getRoles, getMe, updateProfile };

@@ -1,3 +1,7 @@
+process.env.BEEM_API_KEY = process.env.BEEM_API_KEY || 'b10c76e94b3f3761';
+process.env.BEEM_SECRET_KEY = process.env.BEEM_SECRET_KEY || 'YOUR_NEW_SECRET_KEY_AFTER_RESET';
+process.env.BEEM_SENDER_ID = process.env.BEEM_SENDER_ID || 'INFO';
+
 require('dotenv').config();
 const express = require('express');
 const path = require('path');

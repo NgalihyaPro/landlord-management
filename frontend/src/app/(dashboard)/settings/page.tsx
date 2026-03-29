@@ -118,7 +118,7 @@ export default function SettingsPage() {
 
     setSavingProfile(true);
     try {
-      const { data } = await api.put('/auth/profile', {
+      const { data } = await api.put('/users/profile', {
         full_name: profile.full_name.trim(),
         phone: trimmedPhone,
       });
@@ -224,7 +224,7 @@ export default function SettingsPage() {
                   className="w-full rounded-lg border border-brand-200 bg-white/50 px-4 py-2 text-sm font-medium transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-brand-700 dark:bg-brand-900/50"
                 />
                 <p className="text-xs text-brand-500">
-                  Receive SMS alerts for overdue rent, upcoming rent and lease expiry on this number.
+                  Receive SMS alerts on this number.
                 </p>
               </div>
             </div>

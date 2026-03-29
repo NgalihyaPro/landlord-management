@@ -333,7 +333,7 @@ const remove = async (req, res) => {
     await conn.beginTransaction();
 
     const [tenants] = await conn.execute(
-      'SELECT unit_id FROM tenants WHERE id = ? AND organization_id = ?',
+      'SELECT unit_id, property_id FROM tenants WHERE id = ? AND organization_id = ?',
       [req.params.id, req.user.organization_id]
     );
 
@@ -342,15 +342,38 @@ const remove = async (req, res) => {
       return res.status(404).json({ error: 'Tenant not found.' });
     }
 
+    const tenant = tenants[0];
+
     await conn.execute(
       'UPDATE tenants SET is_active = FALSE, updated_at = NOW() WHERE id = ? AND organization_id = ?',
       [req.params.id, req.user.organization_id]
     );
 
-    if (tenants[0].unit_id) {
+    let unitDeleted = false;
+    if (tenant.unit_id) {
+      const [unitDeleteResult] = await conn.execute(
+        'DELETE FROM units WHERE id = ? AND organization_id = ?',
+        [tenant.unit_id, req.user.organization_id]
+      );
+      unitDeleted = Number(unitDeleteResult.affectedRows) > 0;
+    }
+
+    if (tenant.property_id && unitDeleted) {
       await conn.execute(
-        "UPDATE units SET status = 'vacant', updated_at = NOW() WHERE id = ? AND organization_id = ?",
-        [tenants[0].unit_id, req.user.organization_id]
+        `UPDATE properties
+         SET total_units = (
+           SELECT COUNT(*) FROM units WHERE property_id = ? AND organization_id = ?
+         ),
+         updated_at = NOW()
+         WHERE id = ? AND organization_id = ?`,
+        [tenant.property_id, req.user.organization_id, tenant.property_id, req.user.organization_id]
+      );
+    }
+
+    if (tenant.unit_id && unitDeleted) {
+      await conn.execute(
+        'INSERT INTO audit_logs (organization_id, user_id, action, table_name, record_id) VALUES (?,?,?,?,?)',
+        [req.user.organization_id, req.user.id, 'DELETE_UNIT', 'units', tenant.unit_id]
       );
     }
 

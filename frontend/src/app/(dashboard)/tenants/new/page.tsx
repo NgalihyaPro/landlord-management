@@ -5,6 +5,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import SetupFlowStepper from '@/components/flow/SetupFlowStepper';
 
+const formatAmount = (value: number) => value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export default function AddTenantPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -21,9 +23,17 @@ export default function AddTenantPage() {
     unit_id: '',
     lease_start_date: '',
     lease_end_date: '',
-    deposit_amount: '',
+    months_rented: '',
     monthly_rent: '' // We will auto-fill this based on the unit selected, but allow override
   });
+
+  const requiredAmount = (() => {
+    if (!formData.monthly_rent || !formData.months_rented) return 0;
+    const monthlyRent = Number(formData.monthly_rent);
+    const monthsRented = Number(formData.months_rented);
+    if (!Number.isFinite(monthlyRent) || !Number.isFinite(monthsRented)) return 0;
+    return monthlyRent * monthsRented;
+  })();
 
   useEffect(() => {
     // Fetch vacant units
@@ -88,7 +98,8 @@ export default function AddTenantPage() {
         lease_start: formData.lease_start_date,
         lease_end: formData.lease_end_date,
         next_due_date: formData.lease_start_date,
-        deposit_paid: formData.deposit_amount // Assume deposit is paid upfront
+        deposit_amount: 0,
+        deposit_paid: 0
       };
 
       const { data } = await api.post('/tenants', payload);
@@ -175,9 +186,16 @@ export default function AddTenantPage() {
                 <label className="text-xs font-semibold text-brand-500 uppercase">Monthly Rent *</label>
                 <input required type="number" step="0.01" name="monthly_rent" value={formData.monthly_rent} onChange={handleChange} className="w-full px-4 py-2 bg-brand-50 dark:bg-brand-800/80 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Security Deposit *</label>
-                <input required type="number" step="0.01" name="deposit_amount" value={formData.deposit_amount} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
+                <label className="text-xs font-semibold text-brand-500 uppercase">Months Rented *</label>
+                <input required type="number" min="1" step="1" name="months_rented" value={formData.months_rented} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-brand-500 uppercase">Required Amount</label>
+                <input readOnly type="text" value={formatAmount(requiredAmount)} className="w-full px-4 py-2 bg-brand-50 dark:bg-brand-800/80 border border-brand-200 dark:border-brand-700 rounded-lg text-sm font-medium text-brand-700 dark:text-brand-100 cursor-not-allowed" />
               </div>
             </div>
             

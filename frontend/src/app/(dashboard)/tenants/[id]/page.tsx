@@ -221,6 +221,7 @@ export default function TenantProfilePage() {
                     <label className="text-xs font-semibold uppercase tracking-wider text-brand-500">New lease end date</label>
                     <input
                       type="date"
+                      lang="en-GB"
                       value={leaseEndInput}
                       onChange={(event) => setLeaseEndInput(event.target.value)}
                       min={tenant.lease_end ? formatDateInputValue(tenant.lease_end) : formatDateInputValue(tenant.lease_start)}

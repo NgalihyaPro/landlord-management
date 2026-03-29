@@ -184,11 +184,11 @@ export default function AddTenantPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-brand-500 uppercase">Lease Start Date *</label>
-                <input required type="date" name="lease_start_date" value={formData.lease_start_date} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
+                <input required type="date" lang="en-GB" name="lease_start_date" value={formData.lease_start_date} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-brand-500 uppercase">Lease End Date *</label>
-                <input required type="date" name="lease_end_date" value={formData.lease_end_date} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
+                <input required type="date" lang="en-GB" name="lease_end_date" value={formData.lease_end_date} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
             </div>
           </div>

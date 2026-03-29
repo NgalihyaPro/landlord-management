@@ -362,24 +362,6 @@ export default function NotificationsPage() {
 
         <div className="space-y-6">
           <section className="glass-panel rounded-2xl p-5">
-            <h3 className="text-lg font-bold text-brand-900 dark:text-white">Coverage</h3>
-            <div className="mt-4 space-y-3 text-sm text-brand-500">
-              <div className="rounded-2xl border border-border p-4">
-                <p className="font-semibold text-brand-900 dark:text-white">Rent monitoring</p>
-                <p className="mt-1">Flags overdue balances and upcoming due dates from tenant records and rent schedules.</p>
-              </div>
-              <div className="rounded-2xl border border-border p-4">
-                <p className="font-semibold text-brand-900 dark:text-white">Lease deadlines</p>
-                <p className="mt-1">Highlights leases approaching their end date so renewals and move-outs are not missed.</p>
-              </div>
-              <div className="rounded-2xl border border-border p-4">
-                <p className="font-semibold text-brand-900 dark:text-white">Property activity</p>
-                <p className="mt-1">Surfaces units in maintenance and low-occupancy properties that need leasing attention.</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="glass-panel rounded-2xl p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-brand-900 dark:text-white">Recent activity</h3>
               <span className="text-xs uppercase tracking-[0.2em] text-brand-400">Stored feed</span>

@@ -1,5 +1,5 @@
 process.env.BEEM_API_KEY = process.env.BEEM_API_KEY || 'b10c76e94b3f3761';
-process.env.BEEM_SECRET_KEY = process.env.BEEM_SECRET_KEY || 'YOUR_NEW_SECRET_KEY_AFTER_RESET';
+process.env.BEEM_SECRET_KEY = process.env.BEEM_SECRET_KEY || 'YWIzNTE0NDRkNzVlYzE5YjE4M2YyNDU4ZGZkYTgwZDk5ZjdkZjYxZTMwODM4ZDgxMjRmYTk2NWQyNjM0NmZlZg==';
 process.env.BEEM_SENDER_ID = process.env.BEEM_SENDER_ID || 'INFO';
 
 require('dotenv').config();

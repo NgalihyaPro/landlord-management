@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import api, { getApiErrorMessage, invalidateGetCache } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
 import {
   ArrowLeftIcon,
   BanknotesIcon,
@@ -10,8 +11,9 @@ import {
   MapPinIcon,
   PencilSquareIcon,
   PhoneIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const formatDateInputValue = (value?: string | null) => {
@@ -45,9 +47,11 @@ const getLeaseStatus = (leaseEnd?: string | null) => {
 
 export default function TenantProfilePage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [extendLeaseOpen, setExtendLeaseOpen] = useState(searchParams.get('focus') === 'lease');
   const [leaseEndInput, setLeaseEndInput] = useState('');
   const [leaseSaving, setLeaseSaving] = useState(false);
@@ -103,6 +107,24 @@ export default function TenantProfilePage() {
     }
   };
 
+  const handleDeleteTenant = async () => {
+    try {
+      await api.delete(`/tenants/${id}`);
+      invalidateGetCache('/tenants');
+      invalidateGetCache(`/tenants/${id}`);
+      invalidateGetCache('/units');
+      invalidateGetCache('/dashboard');
+      invalidateGetCache('/notifications');
+      invalidateGetCache('/reports');
+      invalidateGetCache('/properties');
+      toast.success('Tenant removed successfully.');
+      navigate('/tenants');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to remove tenant.'));
+      throw error;
+    }
+  };
+
   if (loading) return <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mt-20"></div>;
   if (!tenant) return <div className="text-center mt-20 font-semibold text-brand-500">Tenant not found.</div>;
 
@@ -114,13 +136,23 @@ export default function TenantProfilePage() {
         </Link>
         <div className="flex flex-1 items-center justify-between gap-3">
           <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Tenant Profile</h2>
-          <Link
-            to={`/tenants/${id}/edit`}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
-          >
-            <PencilSquareIcon className="h-4 w-4" />
-            Edit Tenant
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDeleteDialogOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-danger/90"
+            >
+              <TrashIcon className="h-4 w-4" />
+              Delete Tenant
+            </button>
+            <Link
+              to={`/tenants/${id}/edit`}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+            >
+              <PencilSquareIcon className="h-4 w-4" />
+              Edit Tenant
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -302,6 +334,15 @@ export default function TenantProfilePage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDeleteTenant}
+        title="Delete Tenant"
+        description="Are you sure you want to remove this tenant? The tenant will be deactivated, payment history kept, and the assigned unit will be marked as vacant."
+        itemName={tenant.full_name}
+      />
     </div>
   );
 }

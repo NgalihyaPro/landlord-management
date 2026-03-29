@@ -101,4 +101,15 @@ const ensureTenantBillingColumns = async () => {
   );
 };
 
-module.exports = { pool, testConnection, ensureTenantBillingColumns };
+const ensurePropertyLandlordColumn = async () => {
+  await pool.query(
+    'ALTER TABLE properties ADD COLUMN IF NOT EXISTS landlord_id INTEGER REFERENCES users(id)'
+  );
+  await pool.query(
+    `UPDATE properties
+     SET landlord_id = owner_id
+     WHERE landlord_id IS NULL AND owner_id IS NOT NULL`
+  );
+};
+
+module.exports = { pool, testConnection, ensureTenantBillingColumns, ensurePropertyLandlordColumn };

@@ -6,7 +6,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
-const { pool, testConnection, ensureTenantBillingColumns } = require('./src/database/db');
+const { pool, testConnection, ensureTenantBillingColumns, ensurePropertyLandlordColumn } = require('./src/database/db');
 const { createRequestId } = require('./src/utils/auth.utils');
 const { requireCsrf } = require('./src/middleware/csrf.middleware');
 
@@ -22,6 +22,7 @@ const userRoutes = require('./src/routes/user.routes');
 const dashboardRoutes = require('./src/routes/dashboard.routes');
 const platformAdminRoutes = require('./src/routes/platform-admin.routes');
 const { autoUpdateTenantStatuses } = require('./src/controllers/tenant.controller');
+const { runDailyAlerts } = require('./src/services/alerts.service');
 
 const PORT = Number(process.env.PORT || 5000);
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -168,8 +169,14 @@ const scheduleJobs = () => {
   }
 
   cron.schedule('0 0 * * *', async () => {
-    console.log('[cron] Running daily tenant status update');
-    await autoUpdateTenantStatuses();
+    try {
+      console.log('[cron] Running daily tenant status update');
+      await autoUpdateTenantStatuses();
+      console.log('[cron] Running daily landlord SMS alerts');
+      await runDailyAlerts();
+    } catch (error) {
+      console.error('[cron] Daily jobs failed:', error);
+    }
   });
   scheduledJobs = true;
 };
@@ -177,6 +184,7 @@ const scheduleJobs = () => {
 const start = async () => {
   await testConnection();
   await ensureTenantBillingColumns();
+  await ensurePropertyLandlordColumn();
   scheduleJobs();
 
   const app = createApp();

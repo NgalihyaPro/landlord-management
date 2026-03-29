@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { cachedGet } from '@/lib/api';
+import api, { cachedGet, invalidateGetCache, getApiErrorMessage } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import {
   CreditCardIcon,
@@ -7,10 +7,12 @@ import {
   DocumentArrowDownIcon,
   BanknotesIcon,
   MagnifyingGlassIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
 import { toast } from 'sonner';
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
 
 const escapeCsvValue = (value: unknown) => {
   const normalized = String(value ?? '').replace(/"/g, '""');
@@ -25,6 +27,7 @@ export default function PaymentsPage() {
   const [search, setSearch] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
   const [methodFilter, setMethodFilter] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const tp = t('payments');
   const common = t('tenants');
@@ -66,6 +69,23 @@ export default function PaymentsPage() {
     });
   }, [data.payments, search, monthFilter, methodFilter]);
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api.delete(`/payments/${deleteTarget.id}`);
+      invalidateGetCache('/payments');
+      setData((prev) => ({
+        ...prev,
+        payments: prev.payments.filter((p) => p.id !== deleteTarget.id),
+        total: prev.total - 1,
+      }));
+      toast.success(`Payment ${deleteTarget.receipt_number} has been deleted.`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to delete payment.'));
+      throw err;
+    }
+  };
+
   const handleExportCsv = () => {
     if (!filteredPayments.length) {
       toast.error('No payment records available to export');
@@ -73,28 +93,14 @@ export default function PaymentsPage() {
     }
 
     const headers = [
-      'Receipt Number',
-      'Tenant Name',
-      'Property Name',
-      'Unit Number',
-      'Payment Date',
-      'Payment Method',
-      'Reference Number',
-      'Amount Paid',
-      'Balance',
-      'Payment Status',
+      'Receipt Number', 'Tenant Name', 'Property Name', 'Unit Number',
+      'Payment Date', 'Payment Method', 'Reference Number', 'Amount Paid', 'Balance', 'Payment Status',
     ];
 
     const rows = filteredPayments.map((payment: any) => [
-      payment.receipt_number,
-      payment.tenant_name,
-      payment.property_name,
-      payment.unit_number,
-      formatDate(payment.payment_date),
-      payment.method_name,
-      payment.reference_number,
-      payment.amount_paid,
-      payment.balance,
+      payment.receipt_number, payment.tenant_name, payment.property_name, payment.unit_number,
+      formatDate(payment.payment_date), payment.method_name, payment.reference_number,
+      payment.amount_paid, payment.balance,
       common.statuses[payment.payment_status as keyof typeof common.statuses] || payment.payment_status,
     ]);
 
@@ -205,11 +211,12 @@ export default function PaymentsPage() {
                   <th className="px-6 py-4 font-semibold text-right">{tp.table.amount_paid}</th>
                   <th className="px-6 py-4 font-semibold text-right">{tp.table.balance}</th>
                   <th className="px-6 py-4 font-semibold text-center">{tp.table.status}</th>
+                  <th className="px-6 py-4 font-semibold text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="text-sm text-brand-700 dark:text-brand-300 divide-y divide-border/50">
                 {filteredPayments.length > 0 ? filteredPayments.map((payment: any) => (
-                  <tr key={payment.id} className="hover:bg-brand-50/50 dark:hover:bg-brand-800/50 transition-colors cursor-pointer">
+                  <tr key={payment.id} className="hover:bg-brand-50/50 dark:hover:bg-brand-800/50 transition-colors group">
                     <td className="px-6 py-4 font-mono text-xs font-semibold text-primary">
                       {payment.receipt_number}
                     </td>
@@ -240,10 +247,19 @@ export default function PaymentsPage() {
                         {common.statuses[payment.payment_status as keyof typeof common.statuses] || payment.payment_status}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => setDeleteTarget(payment)}
+                        className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Delete payment"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-brand-500 bg-brand-50/20 dark:bg-brand-900/20">
+                    <td colSpan={8} className="px-6 py-12 text-center text-brand-500 bg-brand-50/20 dark:bg-brand-900/20">
                       {search || monthFilter || methodFilter ? 'No payments match the current filters.' : tp.no_payments}
                     </td>
                   </tr>
@@ -253,6 +269,16 @@ export default function PaymentsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Payment Record"
+        description="Are you sure you want to permanently delete this payment record? This action cannot be undone."
+        itemName={deleteTarget ? `${deleteTarget.receipt_number} — ${formatCurrency(deleteTarget.amount_paid)} from ${deleteTarget.tenant_name}` : undefined}
+        warning="Deleting a payment will not automatically update the tenant's balance. You may need to adjust it manually."
+      />
     </div>
   );
 }

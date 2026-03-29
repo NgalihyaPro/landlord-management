@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { cachedGet } from '@/lib/api';
+import api, { cachedGet, invalidateGetCache, getApiErrorMessage } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
-import { 
-  UserGroupIcon, PlusIcon, MagnifyingGlassIcon, 
-  PhoneIcon, ArrowUpRightIcon 
+import {
+  UserGroupIcon, PlusIcon, MagnifyingGlassIcon,
+  PhoneIcon, ArrowUpRightIcon, TrashIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
+import { toast } from 'sonner';
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
 
 export default function TenantsPage() {
   const { t } = useLanguage();
@@ -14,7 +16,8 @@ export default function TenantsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+
   const tt = t('tenants');
 
   useEffect(() => {
@@ -23,7 +26,7 @@ export default function TenantsPage() {
         const query = new URLSearchParams();
         if (search) query.append('search', search);
         if (statusFilter) query.append('status', statusFilter);
-        
+
         const queryString = query.toString();
         const result = await cachedGet<{ tenants: any[]; total: number }>(
           `/tenants${queryString ? `?${queryString}` : ''}`
@@ -35,13 +38,30 @@ export default function TenantsPage() {
         setLoading(false);
       }
     };
-    
-    // Quick debounce hack
+
     const timeoutId = setTimeout(() => {
       fetchTenants();
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [search, statusFilter]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api.delete(`/tenants/${deleteTarget.id}`);
+      invalidateGetCache('/tenants');
+      invalidateGetCache('/units');
+      setData((prev) => ({
+        ...prev,
+        tenants: prev.tenants.filter((t) => t.id !== deleteTarget.id),
+        total: prev.total - 1,
+      }));
+      toast.success(`Tenant "${deleteTarget.full_name}" has been removed.`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to remove tenant.'));
+      throw err;
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -50,11 +70,11 @@ export default function TenantsPage() {
           <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{tt.title}</h2>
           <p className="text-brand-500">{tt.desc}</p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-400" />
-            <input 
+            <input
               type="text"
               placeholder={tt.search_placeholder}
               value={search}
@@ -62,7 +82,7 @@ export default function TenantsPage() {
               className="w-full pl-9 pr-3 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm transition-all"
             />
           </div>
-          <select 
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full sm:w-auto px-3 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary text-sm text-brand-700 dark:text-brand-300"
@@ -90,7 +110,7 @@ export default function TenantsPage() {
             <div key={t.id} className="glass-panel rounded-2xl p-6 group hover:-translate-y-1 hover:shadow-xl transition-all duration-300 relative overflow-hidden">
               {/* Status color accent line at top */}
               <div className={`absolute top-0 left-0 right-0 h-1.5 ${getStatusColor(t.payment_status).split(' ')[0]}`} />
-              
+
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-800 text-primary font-bold text-lg">
@@ -104,6 +124,13 @@ export default function TenantsPage() {
                     </div>
                   </div>
                 </div>
+                <button
+                  onClick={() => setDeleteTarget(t)}
+                  className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Remove tenant"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-y-4 gap-x-2 my-6">
@@ -157,6 +184,16 @@ export default function TenantsPage() {
           )}
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Remove Tenant"
+        description="Are you sure you want to remove this tenant? Their unit will be marked as vacant. Payment history is preserved."
+        itemName={deleteTarget ? `${deleteTarget.full_name} — Unit ${deleteTarget.unit_number}` : undefined}
+        warning={deleteTarget?.outstanding_balance > 0 ? `This tenant has an outstanding balance of ${formatCurrency(deleteTarget.outstanding_balance)}.` : undefined}
+      />
     </div>
   );
 }

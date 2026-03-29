@@ -1,29 +1,45 @@
 import { useEffect, useState } from 'react';
-import { cachedGet } from '@/lib/api';
+import api, { cachedGet, invalidateGetCache, getApiErrorMessage } from '@/lib/api';
 import { formatCurrency, getStatusColor } from '@/lib/utils';
-import { PlusIcon, HomeIcon, MagnifyingGlassIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, HomeIcon, MagnifyingGlassIcon, UserCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
 
 export default function UnitsPage() {
   const [units, setUnits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchUnits = async () => {
-      try {
-        const data = await cachedGet<any[]>('/units');
-        setUnits(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchUnits();
-  }, []);
+  const fetchUnits = async () => {
+    try {
+      const data = await cachedGet<any[]>('/units', { force: true });
+      setUnits(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredUnits = units.filter((u: any) => 
+  useEffect(() => { fetchUnits(); }, []);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api.delete(`/units/${deleteTarget.id}`);
+      invalidateGetCache('/units');
+      invalidateGetCache('/properties');
+      setUnits((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+      toast.success(`Unit "${deleteTarget.unit_number}" has been deleted.`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to delete unit.'));
+      throw err;
+    }
+  };
+
+  const filteredUnits = units.filter((u: any) =>
     u.unit_number.toLowerCase().includes(search.toLowerCase()) ||
     u.property_name.toLowerCase().includes(search.toLowerCase()) ||
     (u.tenant_name && u.tenant_name.toLowerCase().includes(search.toLowerCase()))
@@ -39,7 +55,7 @@ export default function UnitsPage() {
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative w-full sm:w-64">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-400" />
-            <input 
+            <input
               type="text"
               placeholder="Search units, property, tenant..."
               value={search}
@@ -70,7 +86,7 @@ export default function UnitsPage() {
                   <th className="px-6 py-4 font-semibold">Current Tenant</th>
                   <th className="px-6 py-4 font-semibold text-right">Rent / Month</th>
                   <th className="px-6 py-4 font-semibold text-center">Status</th>
-                  <th className="px-6 py-4 font-semibold text-right">Action</th>
+                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm text-brand-700 dark:text-brand-300 divide-y divide-border/50">
@@ -111,9 +127,18 @@ export default function UnitsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link to={`/properties/${u.property_id}`} className="text-primary hover:underline font-semibold text-sm transition-colors opacity-0 group-hover:opacity-100">
-                        View Property
-                      </Link>
+                      <div className="flex items-center justify-end gap-2">
+                        <Link to={`/properties/${u.property_id}`} className="text-primary hover:underline font-semibold text-sm transition-colors opacity-0 group-hover:opacity-100">
+                          View
+                        </Link>
+                        <button
+                          onClick={() => setDeleteTarget(u)}
+                          className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Delete unit"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )) : (
@@ -128,6 +153,16 @@ export default function UnitsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Unit"
+        description="Are you sure you want to permanently delete this unit? This action cannot be undone."
+        itemName={deleteTarget ? `${deleteTarget.unit_number} — ${deleteTarget.property_name}` : undefined}
+        warning={deleteTarget?.tenant_name ? `This unit is currently occupied by ${deleteTarget.tenant_name}. The tenant must be removed first.` : undefined}
+      />
     </div>
   );
 }

@@ -251,4 +251,54 @@ const getPaymentMethods = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, getReceipt, getPaymentMethods };
+const remove = async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [payments] = await conn.execute(
+      'SELECT * FROM payments WHERE id = ? AND organization_id = ?',
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!payments.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Payment not found.' });
+    }
+
+    const payment = payments[0];
+
+    await conn.execute(
+      'INSERT INTO audit_logs (organization_id, user_id, action, table_name, record_id, old_values) VALUES (?,?,?,?,?,?)',
+      [
+        req.user.organization_id,
+        req.user.id,
+        'DELETE_PAYMENT',
+        'payments',
+        payment.id,
+        JSON.stringify({
+          tenant_id: payment.tenant_id,
+          amount_paid: payment.amount_paid,
+          payment_date: payment.payment_date,
+          receipt_number: payment.receipt_number,
+        }),
+      ]
+    );
+
+    await conn.execute(
+      'DELETE FROM payments WHERE id = ? AND organization_id = ?',
+      [req.params.id, req.user.organization_id]
+    );
+
+    await conn.commit();
+    res.json({ message: 'Payment deleted successfully.' });
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete payment.' });
+  } finally {
+    conn.release();
+  }
+};
+
+module.exports = { getAll, create, getReceipt, getPaymentMethods, remove };

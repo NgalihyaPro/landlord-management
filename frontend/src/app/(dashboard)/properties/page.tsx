@@ -1,25 +1,40 @@
 import { useEffect, useState } from 'react';
-import { cachedGet } from '@/lib/api';
-import { BuildingOfficeIcon, PlusIcon, MapPinIcon, HomeModernIcon } from '@heroicons/react/24/outline';
+import api, { cachedGet, invalidateGetCache, getApiErrorMessage } from '@/lib/api';
+import { BuildingOfficeIcon, PlusIcon, MapPinIcon, HomeModernIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
 
 export default function PropertiesPage() {
   const [properties, setProperties] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchProps = async () => {
-      try {
-        const data = await cachedGet<any[]>('/properties');
-        setProperties(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProps();
-  }, []);
+  const fetchProps = async () => {
+    try {
+      const data = await cachedGet<any[]>('/properties', { force: true });
+      setProperties(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchProps(); }, []);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await api.delete(`/properties/${deleteTarget.id}`);
+      invalidateGetCache('/properties');
+      setProperties((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      toast.success(`"${deleteTarget.name}" has been removed.`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to delete property.'));
+      throw err;
+    }
+  };
 
   if (loading) return <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mt-20"></div>;
 
@@ -43,11 +58,20 @@ export default function PropertiesPage() {
               <div className="bg-brand-100 dark:bg-brand-800 p-3 rounded-xl">
                 <BuildingOfficeIcon className="h-8 w-8 text-primary" />
               </div>
-              <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.status === 'active' ? 'bg-success/10 text-success border border-success/20' : 'bg-brand-200 text-brand-600 border border-brand-300'}`}>
-                {p.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${p.status === 'active' ? 'bg-success/10 text-success border border-success/20' : 'bg-brand-200 text-brand-600 border border-brand-300'}`}>
+                  {p.status}
+                </span>
+                <button
+                  onClick={() => setDeleteTarget(p)}
+                  className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Delete property"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            
+
             <h3 className="text-xl font-bold text-brand-900 dark:text-white line-clamp-1 mb-1">{p.name}</h3>
             <div className="flex items-start gap-1 text-sm text-brand-500 mb-6 h-10">
               <MapPinIcon className="h-4 w-4 shrink-0 mt-0.5" />
@@ -66,8 +90,8 @@ export default function PropertiesPage() {
                 <p className="text-xs text-brand-400 font-semibold uppercase tracking-wider">Occupancy</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   <div className="w-full bg-brand-100 dark:bg-brand-800 rounded-full h-1.5">
-                    <div 
-                      className="bg-primary h-1.5 rounded-full" 
+                    <div
+                      className="bg-primary h-1.5 rounded-full"
                       style={{ width: `${p.total_units ? Math.round((p.occupied_count / p.total_units) * 100) : 0}%` }}
                     />
                   </div>
@@ -98,6 +122,16 @@ export default function PropertiesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Property"
+        description="Are you sure you want to delete this property? This will deactivate it and it will no longer appear in your listings."
+        itemName={deleteTarget?.name}
+        warning={deleteTarget?.occupied_count > 0 ? `This property has ${deleteTarget.occupied_count} occupied unit(s). They must be vacated before deletion.` : undefined}
+      />
     </div>
   );
 }

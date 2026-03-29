@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import api, { cachedGet, invalidateGetCache, getApiErrorMessage } from '@/lib/api';
+import api, { cachedGet, getApiErrorMessage, invalidateGetCache } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
 import {
   CreditCardIcon,
   PlusIcon,
   DocumentArrowDownIcon,
+  DocumentTextIcon,
   BanknotesIcon,
   MagnifyingGlassIcon,
   TrashIcon,
@@ -12,7 +13,6 @@ import {
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
 import { toast } from 'sonner';
-import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
 
 const escapeCsvValue = (value: unknown) => {
   const normalized = String(value ?? '').replace(/"/g, '""');
@@ -21,13 +21,16 @@ const escapeCsvValue = (value: unknown) => {
 
 export default function PaymentsPage() {
   const { t } = useLanguage();
-  const [data, setData] = useState<{ payments: any[]; total: number }>({ payments: [], total: 0 });
+  const [allPayments, setAllPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [receiptLoadingId, setReceiptLoadingId] = useState<number | null>(null);
   const [methodOptions, setMethodOptions] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [monthFilter, setMonthFilter] = useState('');
   const [methodFilter, setMethodFilter] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const tp = t('payments');
   const common = t('tenants');
@@ -35,14 +38,30 @@ export default function PaymentsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [paymentsRes, methodsRes] = await Promise.all([
-          cachedGet<{ payments: any[]; total: number }>('/payments'),
-          cachedGet<any[]>('/payments/methods'),
-        ]);
-        setData(paymentsRes);
+        setLoading(true);
+        const methodsPromise = cachedGet<any[]>('/payments/methods');
+
+        const payments: any[] = [];
+        let page = 1;
+        let pages = 1;
+        const limit = 200;
+
+        do {
+          const paymentsRes = await cachedGet<{ payments: any[]; total: number; page: number; pages: number }>(
+            `/payments?page=${page}&limit=${limit}`,
+            { force: true }
+          );
+          payments.push(...(paymentsRes.payments || []));
+          pages = paymentsRes.pages || 1;
+          page += 1;
+        } while (page <= pages);
+
+        const methodsRes = await methodsPromise;
+        setAllPayments(payments);
         setMethodOptions(methodsRes);
       } catch (err) {
         console.error(err);
+        toast.error('Failed to load payments');
       } finally {
         setLoading(false);
       }
@@ -50,10 +69,14 @@ export default function PaymentsPage() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, monthFilter, methodFilter]);
+
   const filteredPayments = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    return data.payments.filter((payment: any) => {
+    return allPayments.filter((payment: any) => {
       const matchesSearch = !normalizedSearch || [
         payment.receipt_number,
         payment.tenant_name,
@@ -67,24 +90,20 @@ export default function PaymentsPage() {
 
       return matchesSearch && matchesMonth && matchesMethod;
     });
-  }, [data.payments, search, monthFilter, methodFilter]);
+  }, [allPayments, search, monthFilter, methodFilter]);
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      await api.delete(`/payments/${deleteTarget.id}`);
-      invalidateGetCache('/payments');
-      setData((prev) => ({
-        ...prev,
-        payments: prev.payments.filter((p) => p.id !== deleteTarget.id),
-        total: prev.total - 1,
-      }));
-      toast.success(`Payment ${deleteTarget.receipt_number} has been deleted.`);
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to delete payment.'));
-      throw err;
+  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / pageSize));
+  const activePage = Math.min(currentPage, totalPages);
+  const startIndex = (activePage - 1) * pageSize;
+  const paginatedPayments = filteredPayments.slice(startIndex, startIndex + pageSize);
+  const showingFrom = filteredPayments.length ? startIndex + 1 : 0;
+  const showingTo = Math.min(startIndex + pageSize, filteredPayments.length);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
     }
-  };
+  }, [currentPage, totalPages]);
 
   const handleExportCsv = () => {
     if (!filteredPayments.length) {
@@ -93,14 +112,28 @@ export default function PaymentsPage() {
     }
 
     const headers = [
-      'Receipt Number', 'Tenant Name', 'Property Name', 'Unit Number',
-      'Payment Date', 'Payment Method', 'Reference Number', 'Payment Received', 'Balance', 'Payment Status',
+      'Receipt Number',
+      'Tenant Name',
+      'Property Name',
+      'Unit Number',
+      'Payment Date',
+      'Payment Method',
+      'Reference Number',
+      'Payment Received',
+      'Balance',
+      'Payment Status',
     ];
 
     const rows = filteredPayments.map((payment: any) => [
-      payment.receipt_number, payment.tenant_name, payment.property_name, payment.unit_number,
-      formatDate(payment.payment_date), payment.method_name, payment.reference_number,
-      payment.amount_paid, payment.balance,
+      payment.receipt_number,
+      payment.tenant_name,
+      payment.property_name,
+      payment.unit_number,
+      formatDate(payment.payment_date),
+      payment.method_name,
+      payment.reference_number,
+      payment.amount_paid,
+      payment.balance,
       common.statuses[payment.payment_status as keyof typeof common.statuses] || payment.payment_status,
     ]);
 
@@ -124,12 +157,93 @@ export default function PaymentsPage() {
     toast.success('Payments CSV downloaded');
   };
 
+  const handleDownloadReceipt = async (paymentId: number) => {
+    try {
+      setReceiptLoadingId(paymentId);
+      const { data } = await api.get(`/payments/${paymentId}/receipt`);
+      const { payment, settings } = data;
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      const orgName = settings?.business_name || settings?.organization_name || 'LandlordPro';
+      const orgAddress = settings?.business_address || payment?.address || 'Address not set';
+      const footerMessage = settings?.receipt_footer || settings?.footer_message || '';
+
+      doc.setFontSize(16);
+      doc.text(orgName, 14, 20);
+      doc.setFontSize(10);
+      doc.text(orgAddress, 14, 27);
+      doc.line(14, 31, 196, 31);
+
+      doc.setFontSize(13);
+      doc.text('PAYMENT RECEIPT', 14, 40);
+      doc.setFontSize(10);
+
+      const rows: Array<[string, string]> = [
+        ['Receipt Number', payment.receipt_number || '-'],
+        ['Tenant Name', payment.tenant_name || '-'],
+        ['Unit', payment.unit_number ? `Unit ${payment.unit_number}` : '-'],
+        ['Property', payment.property_name || '-'],
+        ['Payment Date', formatDate(payment.payment_date)],
+        ['Payment Received', formatCurrency(Number(payment.amount_paid || 0))],
+        ['Payment Method', payment.method_name || '-'],
+        ['Balance Remaining', formatCurrency(Number(payment.balance || 0))],
+      ];
+
+      let y = 50;
+      rows.forEach(([label, value]) => {
+        doc.setTextColor(90, 90, 90);
+        doc.text(`${label}:`, 14, y);
+        doc.setTextColor(20, 20, 20);
+        doc.text(String(value), 70, y);
+        y += 8;
+      });
+
+      if (footerMessage) {
+        y += 4;
+        doc.setTextColor(90, 90, 90);
+        doc.text(footerMessage, 14, y, { maxWidth: 182 });
+        y += 12;
+      }
+
+      doc.setTextColor(16, 185, 129);
+      doc.text('Thank you for your payment.', 14, y);
+      doc.save(`receipt-${payment.receipt_number || payment.id}.pdf`);
+      toast.success('Receipt downloaded');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to download receipt.'));
+    } finally {
+      setReceiptLoadingId(null);
+    }
+  };
+
+  const handleDeletePayment = async (payment: any) => {
+    const confirmed = window.confirm(`Delete payment ${payment.receipt_number}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(payment.id);
+      await api.delete(`/payments/${payment.id}`);
+      setAllPayments((current) => current.filter((item) => item.id !== payment.id));
+      invalidateGetCache('/payments');
+      invalidateGetCache('/dashboard');
+      invalidateGetCache('/tenants');
+      invalidateGetCache('/notifications');
+      invalidateGetCache('/reports');
+      toast.success('Payment deleted successfully.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to delete payment.'));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">{tp.title}</h2>
-          <p className="text-sm text-brand-500">{tp.desc}</p>
+          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{tp.title}</h2>
+          <p className="text-brand-500">{tp.desc}</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -169,27 +283,27 @@ export default function PaymentsPage() {
         </div>
       ) : (
         <div className="glass-panel rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-border/50 bg-white/50 dark:bg-brand-900/50 flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
-            <div className="relative flex-1 min-w-0">
+          <div className="p-4 border-b border-border/50 bg-white/50 dark:bg-brand-900/50 flex flex-wrap gap-4 items-center">
+            <div className="relative min-w-[240px] flex-1">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-400" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search tenant, property, receipt..."
-                className="w-full pl-9 pr-3 py-2 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary"
+                placeholder="Search tenant, property, receipt, or reference"
+                className="w-full pl-9 pr-3 py-1.5 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <input
               type="month"
               value={monthFilter}
               onChange={(e) => setMonthFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary w-full sm:w-auto"
+              className="px-3 py-1.5 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary"
             />
             <select
               value={methodFilter}
               onChange={(e) => setMethodFilter(e.target.value)}
-              className="px-3 py-2 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary w-full sm:w-auto"
+              className="px-3 py-1.5 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary w-44"
             >
               <option value="">{tp.all_methods}</option>
               {methodOptions.map((method: any) => (
@@ -211,11 +325,11 @@ export default function PaymentsPage() {
                   <th className="px-6 py-4 font-semibold text-right">{tp.table.amount_paid}</th>
                   <th className="px-6 py-4 font-semibold text-right">{tp.table.balance}</th>
                   <th className="px-6 py-4 font-semibold text-center">{tp.table.status}</th>
-                  <th className="px-6 py-4 font-semibold text-right">Action</th>
+                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="text-sm text-brand-700 dark:text-brand-300 divide-y divide-border/50">
-                {filteredPayments.length > 0 ? filteredPayments.map((payment: any) => (
+                {paginatedPayments.length > 0 ? paginatedPayments.map((payment: any) => (
                   <tr key={payment.id} className="hover:bg-brand-50/50 dark:hover:bg-brand-800/50 transition-colors group">
                     <td className="px-6 py-4 font-mono text-xs font-semibold text-primary">
                       {payment.receipt_number}
@@ -248,13 +362,26 @@ export default function PaymentsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => setDeleteTarget(payment)}
-                        className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                        title="Delete payment"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                      <div className="inline-flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => void handleDownloadReceipt(payment.id)}
+                          disabled={receiptLoadingId === payment.id}
+                          className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary hover:text-white disabled:opacity-60"
+                        >
+                          <DocumentTextIcon className="h-4 w-4" />
+                          {receiptLoadingId === payment.id ? 'Loading...' : 'Receipt'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeletePayment(payment)}
+                          disabled={deletingId === payment.id}
+                          className="inline-flex items-center gap-1 rounded-md bg-danger/10 px-2 py-1 text-xs font-semibold text-danger transition-colors hover:bg-danger hover:text-white disabled:opacity-60"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                          {deletingId === payment.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )) : (
@@ -267,18 +394,33 @@ export default function PaymentsPage() {
               </tbody>
             </table>
           </div>
+          <p className="px-4 pb-2 pt-2 text-center text-xs text-brand-500 md:hidden">&lt;- Scroll to see more -&gt;</p>
         </div>
       )}
 
-      <ConfirmDeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Delete Payment Record"
-        description="Are you sure you want to permanently delete this payment record? This action cannot be undone."
-        itemName={deleteTarget ? `${deleteTarget.receipt_number} — ${formatCurrency(deleteTarget.amount_paid)} from ${deleteTarget.tenant_name}` : undefined}
-        warning="Deleting a payment will not automatically update the tenant's balance. You may need to adjust it manually."
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <p className="text-sm text-brand-500">
+          Page {activePage} of {totalPages} - Showing {showingFrom}-{showingTo} of {filteredPayments.length} records
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+            disabled={activePage <= 1}
+            className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-brand-700 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-200"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+            disabled={activePage >= totalPages}
+            className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-brand-700 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-200"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

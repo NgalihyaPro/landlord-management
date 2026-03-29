@@ -345,7 +345,16 @@ const getAll = async (req, res) => {
        WHERE n.organization_id = ?
          AND (n.user_id = ? OR n.user_id IS NULL)
        ORDER BY n.created_at DESC
-       LIMIT 12`,
+      LIMIT 12`,
+      [organizationId, req.user.id]
+    );
+
+    const [[unreadRows]] = await pool.execute(
+      `SELECT COUNT(*) AS unread
+       FROM notifications
+       WHERE organization_id = ?
+         AND (user_id = ? OR user_id IS NULL)
+         AND is_read = FALSE`,
       [organizationId, req.user.id]
     );
 
@@ -361,7 +370,7 @@ const getAll = async (req, res) => {
     const summary = buildSummary(monitoredAlerts);
 
     res.json({
-      unread: monitoredAlerts.length,
+      unread: Number(unreadRows.unread || 0),
       summary: {
         ...summary,
         active: monitoredAlerts.length,

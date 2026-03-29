@@ -76,11 +76,17 @@ const getValidTab = (value: string | null): ReportTab =>
 const getPdfFileName = (tab: ReportTab, period: string) =>
   `landlordpro-${tab}-report-${period}.pdf`;
 
+const escapeCsvValue = (value: unknown) => {
+  const normalized = String(value ?? '').replace(/"/g, '""');
+  return `"${normalized}"`;
+};
+
 export default function ReportsPage() {
   const [searchParams] = useSearchParams();
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const tabParam = getValidTab(searchParams.get('tab'));
   const [activeTab, setActiveTab] = useState<ReportTab>(tabParam);
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
@@ -242,6 +248,56 @@ export default function ReportsPage() {
     }
   };
 
+  const handleExportOverviewCsv = () => {
+    if (!data?.income_by_property?.length) {
+      toast.error('No overview records available to export');
+      return;
+    }
+
+    try {
+      setExportingCsv(true);
+
+      const headers = [
+        'Property Name',
+        'Total Collected',
+        'Total Expected',
+        'Total Outstanding',
+        'Payment Count',
+      ];
+
+      const rows = data.income_by_property.map((property) => [
+        property.name,
+        formatCurrency(toNumber(property.total_collected)),
+        formatCurrency(toNumber(property.total_expected)),
+        formatCurrency(toNumber(property.total_outstanding)),
+        String(property.payment_count ?? 0),
+      ]);
+
+      const csv = [
+        headers.map(escapeCsvValue).join(','),
+        ...rows.map((row) => row.map(escapeCsvValue).join(',')),
+      ].join('\r\n');
+
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const exportDate = new Date().toISOString().slice(0, 10);
+
+      link.href = url;
+      link.download = `reports-overview-${exportDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Overview CSV downloaded');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to export overview CSV');
+    } finally {
+      setExportingCsv(false);
+    }
+  };
+
   if (loading && !data) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div></div>;
   if (!data) return null;
 
@@ -261,6 +317,16 @@ export default function ReportsPage() {
             onChange={(e) => setMonth(e.target.value)}
             className="px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm font-semibold text-brand-700 dark:text-brand-300 transition-all" 
           />
+          {activeTab === 'overview' && (
+            <button
+              onClick={handleExportOverviewCsv}
+              disabled={exportingCsv}
+              className="flex items-center gap-2 bg-brand-50 hover:bg-brand-100 dark:bg-brand-800 dark:hover:bg-brand-700 text-brand-700 dark:text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <DocumentArrowDownIcon className="h-5 w-5" />
+              {exportingCsv ? 'Exporting...' : 'Export CSV'}
+            </button>
+          )}
           <button
             onClick={handleExportPdf}
             disabled={exporting}
@@ -396,6 +462,7 @@ export default function ReportsPage() {
             ) : (
               <p className="text-brand-500">No overdue tenants for this period.</p>
             )}
+            <p className="pt-2 text-center text-xs text-brand-500 md:hidden">&lt;- Scroll to see more -&gt;</p>
           </div>
         )}
 
@@ -437,6 +504,7 @@ export default function ReportsPage() {
             ) : (
               <p className="text-brand-500">No tenants due soon for this period.</p>
             )}
+            <p className="pt-2 text-center text-xs text-brand-500 md:hidden">&lt;- Scroll to see more -&gt;</p>
           </div>
         )}
 

@@ -1,5 +1,15 @@
 const { pool } = require('../database/db');
 
+const resolveTenantRequiredAmount = (tenant) => {
+  const explicitRequired = Number(tenant?.required_amount || 0);
+  if (explicitRequired > 0) {
+    return explicitRequired;
+  }
+
+  const monthlyRent = Number(tenant?.monthly_rent || 0);
+  return Math.max(0, monthlyRent);
+};
+
 const getAll = async (req, res) => {
   try {
     const { tenant_id, property_id, from_date, to_date, status, page = 1, limit = 20 } = req.query;
@@ -118,9 +128,7 @@ const create = async (req, res) => {
     }
 
     const tenant = tenants[0];
-    const tenantRequiredAmount = Number(
-      tenant.required_amount || (Number(tenant.monthly_rent) * Number(tenant.months_rented || 1))
-    );
+    const tenantRequiredAmount = resolveTenantRequiredAmount(tenant);
     const [[paymentTotals]] = await conn.execute(
       `SELECT COALESCE(SUM(amount_paid), 0) as total_paid
        FROM payments
@@ -212,6 +220,83 @@ const create = async (req, res) => {
   }
 };
 
+const remove = async (req, res) => {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    const [payments] = await conn.execute(
+      `SELECT id, tenant_id, amount_paid, receipt_number
+       FROM payments
+       WHERE id = ? AND organization_id = ?`,
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (!payments.length) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Payment not found.' });
+    }
+
+    const payment = payments[0];
+
+    await conn.execute(
+      'DELETE FROM payments WHERE id = ? AND organization_id = ?',
+      [req.params.id, req.user.organization_id]
+    );
+
+    const [tenants] = await conn.execute(
+      `SELECT id, monthly_rent, required_amount
+       FROM tenants
+       WHERE id = ? AND organization_id = ?`,
+      [payment.tenant_id, req.user.organization_id]
+    );
+
+    if (tenants.length) {
+      const tenant = tenants[0];
+      const tenantRequiredAmount = resolveTenantRequiredAmount(tenant);
+
+      const [[paymentTotals]] = await conn.execute(
+        `SELECT COALESCE(SUM(amount_paid), 0) as total_paid
+         FROM payments
+         WHERE tenant_id = ? AND organization_id = ?`,
+        [payment.tenant_id, req.user.organization_id]
+      );
+
+      const totalPaid = Number(paymentTotals.total_paid || 0);
+      const nextOutstandingBalance = Math.max(0, tenantRequiredAmount - totalPaid);
+
+      let nextPaymentStatus = 'unpaid';
+      if (totalPaid > 0 && nextOutstandingBalance === 0) {
+        nextPaymentStatus = 'paid';
+      } else if (totalPaid > 0 && nextOutstandingBalance > 0) {
+        nextPaymentStatus = 'partial';
+      }
+
+      await conn.execute(
+        `UPDATE tenants
+         SET outstanding_balance = ?, payment_status = ?, updated_at = NOW()
+         WHERE id = ? AND organization_id = ?`,
+        [nextOutstandingBalance, nextPaymentStatus, payment.tenant_id, req.user.organization_id]
+      );
+    }
+
+    await conn.execute(
+      'INSERT INTO audit_logs (organization_id, user_id, action, table_name, record_id) VALUES (?,?,?,?,?)',
+      [req.user.organization_id, req.user.id, 'DELETE_PAYMENT', 'payments', req.params.id]
+    );
+
+    await conn.commit();
+    res.json({ message: 'Payment deleted successfully.' });
+  } catch (err) {
+    await conn.rollback();
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete payment.' });
+  } finally {
+    conn.release();
+  }
+};
+
 const getReceipt = async (req, res) => {
   try {
     const [payments] = await pool.execute(
@@ -262,54 +347,4 @@ const getPaymentMethods = async (req, res) => {
   }
 };
 
-const remove = async (req, res) => {
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    const [payments] = await conn.execute(
-      'SELECT * FROM payments WHERE id = ? AND organization_id = ?',
-      [req.params.id, req.user.organization_id]
-    );
-
-    if (!payments.length) {
-      await conn.rollback();
-      return res.status(404).json({ error: 'Payment not found.' });
-    }
-
-    const payment = payments[0];
-
-    await conn.execute(
-      'INSERT INTO audit_logs (organization_id, user_id, action, table_name, record_id, old_values) VALUES (?,?,?,?,?,?)',
-      [
-        req.user.organization_id,
-        req.user.id,
-        'DELETE_PAYMENT',
-        'payments',
-        payment.id,
-        JSON.stringify({
-          tenant_id: payment.tenant_id,
-          amount_paid: payment.amount_paid,
-          payment_date: payment.payment_date,
-          receipt_number: payment.receipt_number,
-        }),
-      ]
-    );
-
-    await conn.execute(
-      'DELETE FROM payments WHERE id = ? AND organization_id = ?',
-      [req.params.id, req.user.organization_id]
-    );
-
-    await conn.commit();
-    res.json({ message: 'Payment deleted successfully.' });
-  } catch (err) {
-    await conn.rollback();
-    console.error(err);
-    res.status(500).json({ error: 'Failed to delete payment.' });
-  } finally {
-    conn.release();
-  }
-};
-
-module.exports = { getAll, create, getReceipt, getPaymentMethods, remove };
+module.exports = { getAll, create, remove, getReceipt, getPaymentMethods };

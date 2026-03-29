@@ -1,36 +1,48 @@
 import { useEffect, useState } from 'react';
-import api, { cachedGet, invalidateGetCache, getApiErrorMessage } from '@/lib/api';
+import { cachedGet } from '@/lib/api';
 import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils';
-import {
+import { 
   UserGroupIcon, PlusIcon, MagnifyingGlassIcon,
-  PhoneIcon, ArrowUpRightIcon, TrashIcon,
+  PhoneIcon, DocumentArrowDownIcon,
 } from '@heroicons/react/24/outline';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
 import { toast } from 'sonner';
-import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog';
+
+type TenantsResponse = {
+  tenants: any[];
+  total: number;
+  page: number;
+  pages: number;
+};
+
+const escapeCsvValue = (value: unknown) => {
+  const normalized = String(value ?? '').replace(/"/g, '""');
+  return `"${normalized}"`;
+};
 
 export default function TenantsPage() {
   const { t } = useLanguage();
-  const [data, setData] = useState<{ tenants: any[]; total: number }>({ tenants: [], total: 0 });
+  const [data, setData] = useState<TenantsResponse>({ tenants: [], total: 0, page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<any>(null);
-
+  const [page, setPage] = useState(1);
+  
   const tt = t('tenants');
 
   useEffect(() => {
     const fetchTenants = async () => {
+      setLoading(true);
       try {
         const query = new URLSearchParams();
         if (search) query.append('search', search);
         if (statusFilter) query.append('status', statusFilter);
-
-        const queryString = query.toString();
-        const result = await cachedGet<{ tenants: any[]; total: number }>(
-          `/tenants${queryString ? `?${queryString}` : ''}`
-        );
+        query.append('page', String(page));
+        query.append('limit', '20');
+        
+        const result = await cachedGet<TenantsResponse>(`/tenants?${query.toString()}`, { force: true });
         setData(result);
       } catch (err) {
         console.error(err);
@@ -38,28 +50,99 @@ export default function TenantsPage() {
         setLoading(false);
       }
     };
-
+    
+    // Quick debounce hack
     const timeoutId = setTimeout(() => {
       fetchTenants();
     }, 300);
     return () => clearTimeout(timeoutId);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, page]);
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
+  const fetchAllTenantsForExport = async () => {
+    const allTenants: any[] = [];
+    let exportPage = 1;
+    let totalPages = 1;
+
+    do {
+      const query = new URLSearchParams();
+      if (search) query.append('search', search);
+      if (statusFilter) query.append('status', statusFilter);
+      query.append('page', String(exportPage));
+      query.append('limit', '200');
+
+      const response = await cachedGet<TenantsResponse>(`/tenants?${query.toString()}`, { force: true });
+      allTenants.push(...(response.tenants || []));
+      totalPages = response.pages || 1;
+      exportPage += 1;
+    } while (exportPage <= totalPages);
+
+    return allTenants;
+  };
+
+  const handleExportCsv = async () => {
+    if (!data.total) {
+      toast.error('No tenant records available to export');
+      return;
+    }
+
     try {
-      await api.delete(`/tenants/${deleteTarget.id}`);
-      invalidateGetCache('/tenants');
-      invalidateGetCache('/units');
-      setData((prev) => ({
-        ...prev,
-        tenants: prev.tenants.filter((t) => t.id !== deleteTarget.id),
-        total: prev.total - 1,
-      }));
-      toast.success(`Tenant "${deleteTarget.full_name}" has been removed.`);
-    } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to remove tenant.'));
-      throw err;
+      setExporting(true);
+      const tenants = await fetchAllTenantsForExport();
+
+      const headers = [
+        'Full Name',
+        'Phone',
+        'Email',
+        'National ID',
+        'Property Name',
+        'Unit Number',
+        'Monthly Rent',
+        'Required Amount',
+        'Outstanding Balance',
+        'Payment Status',
+        'Lease Start',
+        'Lease End',
+        'Next Due Date',
+      ];
+
+      const rows = tenants.map((tenant) => [
+        tenant.full_name,
+        tenant.phone,
+        tenant.email,
+        tenant.national_id,
+        tenant.property_name,
+        tenant.unit_number,
+        formatCurrency(Number(tenant.monthly_rent || 0)),
+        formatCurrency(Number(tenant.required_amount || 0)),
+        formatCurrency(Number(tenant.outstanding_balance || 0)),
+        tenant.payment_status,
+        formatDate(tenant.lease_start),
+        formatDate(tenant.lease_end),
+        formatDate(tenant.next_due_date),
+      ]);
+
+      const csv = [
+        headers.map(escapeCsvValue).join(','),
+        ...rows.map((row) => row.map(escapeCsvValue).join(',')),
+      ].join('\r\n');
+
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const exportDate = new Date().toISOString().slice(0, 10);
+
+      link.href = url;
+      link.download = `tenants-${exportDate}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Tenants CSV downloaded');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to export tenants CSV');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -67,24 +150,30 @@ export default function TenantsPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">{tt.title}</h2>
-          <p className="text-sm text-brand-500">{tt.desc}</p>
+          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{tt.title}</h2>
+          <p className="text-brand-500">{tt.desc}</p>
         </div>
-
+        
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
           <div className="relative w-full sm:w-64">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-400" />
-            <input
+            <input 
               type="text"
               placeholder={tt.search_placeholder}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="w-full pl-9 pr-3 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm transition-all"
             />
           </div>
-          <select
+          <select 
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="w-full sm:w-auto px-3 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary text-sm text-brand-700 dark:text-brand-300"
           >
             <option value="">{tt.all_statuses}</option>
@@ -93,6 +182,14 @@ export default function TenantsPage() {
             <option value="overdue">{tt.statuses.overdue}</option>
             <option value="partial">{tt.statuses.partial}</option>
           </select>
+          <button
+            onClick={handleExportCsv}
+            disabled={exporting || !data.total}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-50 hover:bg-brand-100 dark:bg-brand-800 dark:hover:bg-brand-700 text-brand-700 dark:text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 whitespace-nowrap"
+          >
+            <DocumentArrowDownIcon className="h-5 w-5" />
+            {exporting ? 'Exporting...' : 'Export CSV'}
+          </button>
           <Link to="/tenants/new" className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm whitespace-nowrap">
             <PlusIcon className="h-5 w-5" />
             {tt.add_tenant}
@@ -110,7 +207,7 @@ export default function TenantsPage() {
             <div key={t.id} className="glass-panel rounded-2xl p-6 group hover:-translate-y-1 hover:shadow-xl transition-all duration-300 relative overflow-hidden">
               {/* Status color accent line at top */}
               <div className={`absolute top-0 left-0 right-0 h-1.5 ${getStatusColor(t.payment_status).split(' ')[0]}`} />
-
+              
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 dark:bg-brand-800 text-primary font-bold text-lg">
@@ -124,13 +221,6 @@ export default function TenantsPage() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => setDeleteTarget(t)}
-                  className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                  title="Remove tenant"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-y-4 gap-x-2 my-6">
@@ -170,9 +260,6 @@ export default function TenantsPage() {
                 <Link to={`/tenants/${t.id}`} className="flex-1 bg-brand-50 hover:bg-brand-100 dark:bg-brand-800 dark:hover:bg-brand-700 text-brand-700 dark:text-white text-center py-2 rounded-lg text-sm font-semibold transition-colors">
                   View Profile
                 </Link>
-                <button className="flex items-center justify-center bg-primary/10 hover:bg-primary/20 text-primary px-4 rounded-lg transition-colors group-hover:bg-primary group-hover:text-white">
-                  <ArrowUpRightIcon className="h-5 w-5" />
-                </button>
               </div>
             </div>
           )) : (
@@ -185,15 +272,29 @@ export default function TenantsPage() {
         </div>
       )}
 
-      <ConfirmDeleteDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Remove Tenant"
-        description="Are you sure you want to remove this tenant? Their unit will be marked as vacant. Payment history is preserved."
-        itemName={deleteTarget ? `${deleteTarget.full_name} — Unit ${deleteTarget.unit_number}` : undefined}
-        warning={deleteTarget?.outstanding_balance > 0 ? `This tenant has an outstanding balance of ${formatCurrency(deleteTarget.outstanding_balance)}.` : undefined}
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+        <p className="text-sm text-brand-500">
+          Page {data.page || page} of {Math.max(1, data.pages || 1)}
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={(data.page || page) <= 1}
+            className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-brand-700 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-200"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.min(Math.max(1, data.pages || 1), current + 1))}
+            disabled={(data.page || page) >= Math.max(1, data.pages || 1)}
+            className="rounded-lg border border-border px-3 py-1.5 text-sm font-semibold text-brand-700 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-200"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -22,8 +22,10 @@ const ApprovalsPage = lazy(() => import('@/app/(dashboard)/admin/approvals/page'
 const TenantsPage = lazy(() => import('@/app/(dashboard)/tenants/page'));
 const AddTenantPage = lazy(() => import('@/app/(dashboard)/tenants/new/page'));
 const TenantProfilePage = lazy(() => import('@/app/(dashboard)/tenants/[id]/page'));
+const TenantEditPage = lazy(() => import('@/app/(dashboard)/tenants/[id]/edit/page'));
 const UnitsPage = lazy(() => import('@/app/(dashboard)/units/page'));
 const AddUnitPage = lazy(() => import('@/app/(dashboard)/units/new/page'));
+const UnitEditPage = lazy(() => import('@/app/(dashboard)/units/[id]/edit/page'));
 const UsersPage = lazy(() => import('@/app/(dashboard)/users/page'));
 const SetupAccountPage = lazy(() => import('@/app/(auth)/setup-account/[token]/page'));
 const NotFoundPage = lazy(() => import('@/app/not-found/page'));
@@ -129,9 +131,11 @@ function AppRoutes() {
             <Route path="/properties/:id" element={<PropertyDetailsPage />} />
             <Route path="/units" element={<UnitsPage />} />
             <Route path="/units/new" element={<AddUnitPage />} />
+            <Route path="/units/:id/edit" element={<UnitEditPage />} />
             <Route path="/tenants" element={<TenantsPage />} />
             <Route path="/tenants/new" element={<AddTenantPage />} />
             <Route path="/tenants/:id" element={<TenantProfilePage />} />
+            <Route path="/tenants/:id/edit" element={<TenantEditPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/payments/new" element={<RecordPaymentPage />} />
             <Route path="/reports" element={<ReportsPage />} />

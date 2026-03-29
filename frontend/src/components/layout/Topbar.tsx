@@ -53,6 +53,18 @@ export function Topbar({ onMenuClick }: TopbarProps) {
     if (user) {
       void fetchNotificationSummary();
     }
+
+    const handleNotificationsUpdated = () => {
+      if (user) {
+        void fetchNotificationSummary();
+      }
+    };
+
+    window.addEventListener('notifications-updated', handleNotificationsUpdated);
+
+    return () => {
+      window.removeEventListener('notifications-updated', handleNotificationsUpdated);
+    };
   }, [pathname, user]);
 
   return (

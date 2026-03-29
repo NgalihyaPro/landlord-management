@@ -13,7 +13,7 @@ import {
   HomeModernIcon,
   WrenchScrewdriverIcon,
 } from '@heroicons/react/24/outline';
-import { cachedGet, getApiErrorMessage, invalidateGetCache } from '@/lib/api';
+import api, { cachedGet, getApiErrorMessage, invalidateGetCache } from '@/lib/api';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -118,6 +118,8 @@ const summaryCards = [
 export default function NotificationsPage() {
   const [data, setData] = useState<AlertsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
+  const [markingItemId, setMarkingItemId] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState<'all' | AlertSeverity>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | AlertCategory>('all');
 
@@ -144,7 +146,48 @@ export default function NotificationsPage() {
     const success = await fetchAlerts(true);
 
     if (success) {
+      window.dispatchEvent(new Event('notifications-updated'));
       toast.success('Alerts refreshed');
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      setMarkingAllRead(true);
+      await api.put('/notifications/all/read');
+      invalidateGetCache('/notifications');
+      setLoading(true);
+      await fetchAlerts(true);
+      window.dispatchEvent(new Event('notifications-updated'));
+      toast.success('All notifications marked as read.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to mark notifications as read.'));
+    } finally {
+      setMarkingAllRead(false);
+    }
+  };
+
+  const extractStoredActivityId = (activityId: string) => {
+    const match = /^activity-(\d+)$/.exec(activityId);
+    return match ? Number(match[1]) : null;
+  };
+
+  const markActivityAsRead = async (activityId: string) => {
+    const storedActivityId = extractStoredActivityId(activityId);
+    if (!storedActivityId) return;
+
+    try {
+      setMarkingItemId(activityId);
+      await api.put(`/notifications/${storedActivityId}/read`);
+      invalidateGetCache('/notifications');
+      setLoading(true);
+      await fetchAlerts(true);
+      window.dispatchEvent(new Event('notifications-updated'));
+      toast.success('Notification marked as read.');
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Failed to update notification.'));
+    } finally {
+      setMarkingItemId(null);
     }
   };
 
@@ -196,6 +239,14 @@ export default function NotificationsPage() {
               className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90"
             >
               Refresh feed
+            </button>
+            <button
+              type="button"
+              onClick={markAllAsRead}
+              disabled={markingAllRead}
+              className="rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-brand-700 shadow-sm transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-900 dark:text-brand-200"
+            >
+              {markingAllRead ? 'Marking...' : 'Mark All as Read'}
             </button>
           </div>
         </div>
@@ -390,11 +441,23 @@ export default function NotificationsPage() {
                             </span>
                           </div>
                           <p className="mt-1 text-sm text-brand-500">{item.message}</p>
-                          {item.action_url && (
-                            <Link to={item.action_url} className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline">
-                              {item.action_label || 'Open'}
-                            </Link>
-                          )}
+                          <div className="mt-3 flex flex-wrap items-center gap-3">
+                            {item.action_url && (
+                              <Link to={item.action_url} className="inline-flex text-sm font-semibold text-primary hover:underline">
+                                {item.action_label || 'Open'}
+                              </Link>
+                            )}
+                            {!item.is_read && extractStoredActivityId(item.id) && (
+                              <button
+                                type="button"
+                                onClick={() => void markActivityAsRead(item.id)}
+                                disabled={markingItemId === item.id}
+                                className="inline-flex rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-brand-600 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 dark:text-brand-300"
+                              >
+                                {markingItemId === item.id ? 'Marking...' : 'Mark as Read'}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -8,6 +8,7 @@ import {
   CheckIcon,
   CreditCardIcon,
   MapPinIcon,
+  PencilSquareIcon,
   PhoneIcon,
 } from '@heroicons/react/24/outline';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -111,8 +112,15 @@ export default function TenantProfilePage() {
         <Link to="/tenants" className="p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-lg transition-colors">
           <ArrowLeftIcon className="h-5 w-5 text-brand-600 dark:text-brand-300" />
         </Link>
-        <div>
+        <div className="flex flex-1 items-center justify-between gap-3">
           <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Tenant Profile</h2>
+          <Link
+            to={`/tenants/${id}/edit`}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
+          >
+            <PencilSquareIcon className="h-4 w-4" />
+            Edit Tenant
+          </Link>
         </div>
       </div>
 

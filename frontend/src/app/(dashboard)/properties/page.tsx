@@ -42,8 +42,8 @@ export default function PropertiesPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Properties</h2>
-          <p className="text-brand-500">Manage your buildings and real estate assets</p>
+          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">Properties</h2>
+          <p className="text-sm text-brand-500">Manage your buildings and real estate assets</p>
         </div>
         <Link to="/properties/new" className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-primary">
           <PlusIcon className="h-5 w-5" />
@@ -64,7 +64,7 @@ export default function PropertiesPage() {
                 </span>
                 <button
                   onClick={() => setDeleteTarget(p)}
-                  className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                   title="Delete property"
                 >
                   <TrashIcon className="h-4 w-4" />

@@ -259,7 +259,7 @@ export default function RecordPaymentPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-brand-500 uppercase flex gap-2">
                 <CurrencyDollarIcon className="h-4 w-4 text-success" />
@@ -289,7 +289,7 @@ export default function RecordPaymentPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1">
               <label className="text-xs font-semibold text-brand-500 uppercase">Payment Method *</label>
               <select

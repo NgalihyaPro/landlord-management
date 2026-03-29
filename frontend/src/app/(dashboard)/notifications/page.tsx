@@ -46,15 +46,15 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-wrap justify-between items-start gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Alerts Center</h2>
-          <p className="text-brand-500">System notifications and important reminders</p>
+          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">Alerts Center</h2>
+          <p className="text-sm text-brand-500">System notifications and important reminders</p>
         </div>
         {data.unread > 0 && (
-          <button 
+          <button
             onClick={markAllRead}
-            className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors bg-primary/10 px-4 py-2 rounded-lg"
+            className="shrink-0 text-sm font-semibold text-primary hover:text-primary/80 transition-colors bg-primary/10 px-4 py-2 rounded-lg"
           >
             Mark all as read
           </button>
@@ -71,11 +71,11 @@ export default function NotificationsPage() {
                 {getIcon(n.type)}
               </div>
               <div className="flex-1">
-                <div className="flex justify-between items-start mb-1">
+                <div className="flex flex-wrap justify-between items-start gap-x-4 gap-y-0.5 mb-1">
                   <h4 className={`text-sm font-bold ${!n.is_read ? 'text-brand-900 dark:text-white' : 'text-brand-700 dark:text-brand-300'}`}>
                     {n.title}
                   </h4>
-                  <span className="text-xs font-semibold text-brand-400 whitespace-nowrap ml-4">
+                  <span className="text-xs font-semibold text-brand-400 whitespace-nowrap shrink-0">
                     {formatDate(n.created_at)}
                   </span>
                 </div>

@@ -78,8 +78,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div className="flex w-full items-center justify-center bg-brand-50 p-8 dark:bg-brand-950 lg:w-1/2">
-        <div className="relative w-full max-w-md space-y-8 overflow-hidden rounded-2xl p-10 shadow-xl glass-panel">
+      <div className="flex w-full items-center justify-center bg-brand-50 p-4 sm:p-8 dark:bg-brand-950 lg:w-1/2">
+        <div className="relative w-full max-w-md space-y-8 overflow-hidden rounded-2xl p-6 sm:p-10 shadow-xl glass-panel">
           <div className="absolute right-0 top-0 -mr-16 -mt-16 h-32 w-32 rounded-full bg-primary/10 blur-2xl" />
 
           <div className="relative z-10 text-center">

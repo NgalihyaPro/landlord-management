@@ -67,8 +67,8 @@ export default function TenantsPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{tt.title}</h2>
-          <p className="text-brand-500">{tt.desc}</p>
+          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">{tt.title}</h2>
+          <p className="text-sm text-brand-500">{tt.desc}</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
@@ -126,7 +126,7 @@ export default function TenantsPage() {
                 </div>
                 <button
                   onClick={() => setDeleteTarget(t)}
-                  className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                   title="Remove tenant"
                 >
                   <TrashIcon className="h-4 w-4" />

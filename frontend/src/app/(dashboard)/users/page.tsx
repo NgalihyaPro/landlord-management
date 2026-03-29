@@ -147,8 +147,8 @@ export default function UsersPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Staff Management</h2>
-          <p className="text-brand-500">Invite staff members, control roles, and monitor account setup status</p>
+          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">Staff Management</h2>
+          <p className="text-sm text-brand-500">Invite staff members, control roles, and monitor account setup status</p>
         </div>
         <button
           onClick={openInviteModal}
@@ -228,7 +228,7 @@ export default function UsersPage() {
                       <button
                         type="button"
                         onClick={() => openEditModal(u)}
-                        className="text-primary hover:text-primary/70 font-semibold text-sm transition-colors opacity-0 group-hover:opacity-100"
+                        className="text-primary hover:text-primary/70 font-semibold text-sm transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       >
                         Edit Access
                       </button>

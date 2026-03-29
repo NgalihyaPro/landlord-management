@@ -128,8 +128,8 @@ export default function PaymentsPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{tp.title}</h2>
-          <p className="text-brand-500">{tp.desc}</p>
+          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">{tp.title}</h2>
+          <p className="text-sm text-brand-500">{tp.desc}</p>
         </div>
         <div className="flex gap-3">
           <button
@@ -169,27 +169,27 @@ export default function PaymentsPage() {
         </div>
       ) : (
         <div className="glass-panel rounded-2xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-border/50 bg-white/50 dark:bg-brand-900/50 flex flex-wrap gap-4 items-center">
-            <div className="relative min-w-[240px] flex-1">
+          <div className="p-4 border-b border-border/50 bg-white/50 dark:bg-brand-900/50 flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center">
+            <div className="relative flex-1 min-w-0">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-400" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search tenant, property, receipt, or reference"
-                className="w-full pl-9 pr-3 py-1.5 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary"
+                placeholder="Search tenant, property, receipt..."
+                className="w-full pl-9 pr-3 py-2 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary"
               />
             </div>
             <input
               type="month"
               value={monthFilter}
               onChange={(e) => setMonthFilter(e.target.value)}
-              className="px-3 py-1.5 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary"
+              className="px-3 py-2 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary w-full sm:w-auto"
             />
             <select
               value={methodFilter}
               onChange={(e) => setMethodFilter(e.target.value)}
-              className="px-3 py-1.5 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary w-44"
+              className="px-3 py-2 text-sm bg-brand-50 dark:bg-brand-800 rounded-lg border-none focus:ring-1 focus:ring-primary w-full sm:w-auto"
             >
               <option value="">{tp.all_methods}</option>
               {methodOptions.map((method: any) => (
@@ -250,7 +250,7 @@ export default function PaymentsPage() {
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => setDeleteTarget(payment)}
-                        className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                         title="Delete payment"
                       >
                         <TrashIcon className="h-4 w-4" />

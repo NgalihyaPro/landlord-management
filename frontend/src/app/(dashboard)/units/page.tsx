@@ -49,8 +49,8 @@ export default function UnitsPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Units & Rooms</h2>
-          <p className="text-brand-500">Manage individual apartments, rooms, and their occupants</p>
+          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">Units & Rooms</h2>
+          <p className="text-sm text-brand-500">Manage individual apartments, rooms, and their occupants</p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <div className="relative w-full sm:w-64">
@@ -128,12 +128,12 @@ export default function UnitsPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link to={`/properties/${u.property_id}`} className="text-primary hover:underline font-semibold text-sm transition-colors opacity-0 group-hover:opacity-100">
+                        <Link to={`/properties/${u.property_id}`} className="text-primary hover:underline font-semibold text-sm transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100">
                           View
                         </Link>
                         <button
                           onClick={() => setDeleteTarget(u)}
-                          className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                          className="p-1.5 rounded-lg text-brand-400 hover:text-danger hover:bg-danger/10 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                           title="Delete unit"
                         >
                           <TrashIcon className="h-4 w-4" />

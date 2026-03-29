@@ -28,9 +28,11 @@ const getAll = async (req, res) => {
       params.push(`%${search}%`, `%${search}%`);
     }
 
-    if (status) {
+    if (status && status !== 'all') {
       query += ' AND p.status = ?';
       params.push(status);
+    } else if (!status) {
+      query += " AND p.status = 'active'";
     }
 
     query += ' ORDER BY p.created_at DESC';
@@ -142,14 +144,27 @@ const update = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
-    const [[{ count }]] = await pool.execute(
+    const [[tenantStats]] = await pool.execute(
+      `SELECT
+         COUNT(*) FILTER (WHERE is_active = TRUE) as active_tenants,
+         COUNT(*) FILTER (WHERE is_active = FALSE) as inactive_tenants
+       FROM tenants
+       WHERE property_id = ? AND organization_id = ?`,
+      [req.params.id, req.user.organization_id]
+    );
+
+    if (Number(tenantStats.active_tenants) > 0) {
+      return res.status(400).json({ error: 'Cannot delete property with active tenants. Remove or archive the tenants first.' });
+    }
+
+    const [[unitStats]] = await pool.execute(
       `SELECT COUNT(*) as count
        FROM units
        WHERE property_id = ? AND organization_id = ? AND status = 'occupied'`,
       [req.params.id, req.user.organization_id]
     );
 
-    if (Number(count) > 0) {
+    if (Number(unitStats.count) > 0) {
       return res.status(400).json({ error: 'Cannot delete property with occupied units.' });
     }
 

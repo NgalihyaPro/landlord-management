@@ -9,6 +9,7 @@ const cron = require('node-cron');
 const {
   pool,
   testConnection,
+  initializeSchema,
   ensureTenantBillingColumns,
   ensureSmsAlertColumns,
 } = require('./src/database/db');
@@ -223,6 +224,7 @@ const scheduleJobs = () => {
 
 const start = async () => {
   await testConnection();
+  await initializeSchema();
   await ensureTenantBillingColumns();
   await ensureSmsAlertColumns();
   scheduleJobs();

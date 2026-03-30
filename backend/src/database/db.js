@@ -1,4 +1,6 @@
 const { Pool } = require('pg');
+const fs = require('fs/promises');
+const path = require('path');
 require('dotenv').config();
 
 const pool = new Pool(
@@ -81,6 +83,17 @@ const testConnection = async () => {
   }
 };
 
+const initializeSchema = async () => {
+  const schemaPath = path.join(__dirname, 'schema.sql');
+  const schemaSql = await fs.readFile(schemaPath, 'utf8');
+
+  if (!schemaSql.trim()) {
+    return;
+  }
+
+  await pool.query(schemaSql);
+};
+
 const ensureTenantBillingColumns = async () => {
   await pool.query('ALTER TABLE tenants ADD COLUMN IF NOT EXISTS months_rented INTEGER NOT NULL DEFAULT 1');
   await pool.query('ALTER TABLE tenants ADD COLUMN IF NOT EXISTS required_amount NUMERIC(12, 2) NOT NULL DEFAULT 0');
@@ -137,6 +150,7 @@ const ensureSmsAlertColumns = async () => {
 module.exports = {
   pool,
   testConnection,
+  initializeSchema,
   ensureTenantBillingColumns,
   ensurePropertyLandlordColumn,
   ensureSmsAlertColumns,

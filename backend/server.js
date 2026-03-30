@@ -1,6 +1,6 @@
-process.env.BEEM_API_KEY = process.env.BEEM_API_KEY || 'b10c76e94b3f3761';
-process.env.BEEM_SECRET_KEY = process.env.BEEM_SECRET_KEY || 'YWIzNTE0NDRkNzVlYzE5YjE4M2YyNDU4ZGZkYTgwZDk5ZjdkZjYxZTMwODM4ZDgxMjRmYTk2NWQyNjM0NmZlZg==';
-process.env.BEEM_SENDER_ID = process.env.BEEM_SENDER_ID || 'INFO';
+process.env.AT_API_KEY = process.env.AT_API_KEY || 'YOUR_AT_API_KEY';
+process.env.AT_USERNAME = process.env.AT_USERNAME || 'sandbox';
+process.env.AT_SENDER_ID = process.env.AT_SENDER_ID || '';
 
 require('dotenv').config();
 const express = require('express');

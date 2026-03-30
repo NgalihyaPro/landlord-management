@@ -1,13 +1,25 @@
 const AfricasTalking = require('africastalking');
 
-const at = AfricasTalking({
-  apiKey: process.env.AT_API_KEY,
-  username: process.env.AT_USERNAME,
-});
+const hasAtCredentials = Boolean(process.env.AT_USERNAME && process.env.AT_API_KEY);
+const at = hasAtCredentials
+  ? AfricasTalking({
+    apiKey: process.env.AT_API_KEY,
+    username: process.env.AT_USERNAME,
+  })
+  : null;
 
-const sms = at.SMS;
+const sms = at ? at.SMS : null;
 
 async function sendSMS(to, message) {
+  if (!sms) {
+    console.warn('[SMS AT] Skipped: AT_USERNAME or AT_API_KEY is missing.');
+    return {
+      success: false,
+      skipped: true,
+      reason: 'Africa\'s Talking credentials are missing',
+    };
+  }
+
   try {
     const result = await sms.send({
       to: [to],
@@ -21,4 +33,4 @@ async function sendSMS(to, message) {
   }
 }
 
-module.exports = { sendSMS };
+module.exports = { sendSMS, smsClient: sms };

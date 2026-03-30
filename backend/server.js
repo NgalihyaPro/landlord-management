@@ -1,7 +1,3 @@
-process.env.AT_API_KEY = process.env.AT_API_KEY || 'YOUR_AT_API_KEY';
-process.env.AT_USERNAME = process.env.AT_USERNAME || 'sandbox';
-process.env.AT_SENDER_ID = process.env.AT_SENDER_ID || '';
-
 require('dotenv').config();
 const express = require('express');
 const path = require('path');

@@ -28,7 +28,7 @@ Create a PostgreSQL database named `landlord_db`, then run the schema:
 psql -U postgres -d landlord_db -f backend/src/database/schema.sql
 ```
 
-Optional demo seed:
+Seed only default admin (idempotent, safe to run multiple times):
 
 ```bash
 cd backend
@@ -36,10 +36,18 @@ npm install
 npm run seed
 ```
 
-Demo credentials created by the seed:
+Optional full demo dataset (owner + manager + sample properties/tenants):
 
-- Owner: `admin@landlordpro.com` / `Admin123!`
-- Manager: `manager@landlordpro.com` / `Manager123!`
+```bash
+cd backend
+npm install
+npm run seed:demo
+```
+
+Credentials:
+
+- Default admin seed (`npm run seed`): `admin@landlordpro.com` / `Admin123!`
+- Demo seed (`npm run seed:demo`) also adds: `manager@landlordpro.com` / `Manager123!`
 
 Use demo accounts only for local testing.
 
@@ -55,10 +63,14 @@ Important variables:
 - `DB_USER`
 - `DB_PASSWORD`
 - `DB_NAME`
+- `DATABASE_URL` (recommended on Render, alternative to DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME)
 - `JWT_SECRET`
 - `FRONTEND_URLS`
 - `AUTH_COOKIE_SAMESITE`
 - `PLATFORM_ADMIN_EMAILS`
+- `DEFAULT_ADMIN_EMAIL`
+- `DEFAULT_ADMIN_PASSWORD`
+- `SEED_CONTINUE_ON_ERROR`
 - `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_USER`
@@ -156,13 +168,14 @@ Before deploying:
 
 1. Create a fresh production PostgreSQL database.
 2. Run `backend/src/database/schema.sql`.
-3. Do not run the demo seed in production.
-4. Set a strong `JWT_SECRET`.
-5. Set real `FRONTEND_URLS`.
-6. Build frontend with `npm run build`.
-7. Verify backend with `npm run check` and `npm test`.
-8. Verify frontend with `npm run typecheck` and `npm run build`.
-9. Confirm `/api/health` and `/api/readiness` return success.
+3. Do not run the demo seed in production (`npm run seed:demo`).
+4. Ensure default admin seed env vars are set (or accept defaults).
+5. Set a strong `JWT_SECRET`.
+6. Set real `FRONTEND_URLS`.
+7. Build frontend with `npm run build`.
+8. Verify backend with `npm run check` and `npm test`.
+9. Verify frontend with `npm run typecheck` and `npm run build`.
+10. Confirm `/api/health` and `/api/readiness` return success.
 
 ## Deploying
 
@@ -173,6 +186,21 @@ cd backend
 npm install
 npm run check
 npm test
+npm run build
+npm start
+```
+
+### Render (Web Service) recommended commands
+
+Build Command:
+
+```bash
+npm install && npm run build
+```
+
+Start Command:
+
+```bash
 npm start
 ```
 

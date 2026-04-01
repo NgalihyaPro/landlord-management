@@ -56,10 +56,19 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
+  const normalizeCurrency = (value: string) => value.replace(/\u00a0/g, ' ');
+
   const cards = [
     { title: td.properties_units, value: `${data.summary.total_properties} / ${data.summary.total_units}`, icon: BuildingOfficeIcon, color: 'text-info', bg: 'bg-info/10' },
     { title: td.active_tenants, value: data.summary.total_tenants, icon: UserGroupIcon, color: 'text-primary', bg: 'bg-primary/10' },
-    { title: td.monthly_collection, value: formatCurrency(data.summary.collected_this_month), subtext: `of ${formatCurrency(data.summary.expected_this_month)}`, icon: CurrencyDollarIcon, color: 'text-success', bg: 'bg-success/10' },
+    {
+      title: td.monthly_collection,
+      value: normalizeCurrency(formatCurrency(data.summary.collected_this_month)),
+      subtext: `of ${normalizeCurrency(formatCurrency(data.summary.expected_this_month))}`,
+      icon: CurrencyDollarIcon,
+      color: 'text-success',
+      bg: 'bg-success/10',
+    },
     { title: td.overdue_cases, value: data.summary.overdue_tenants, icon: ExclamationTriangleIcon, color: 'text-danger', bg: 'bg-danger/10' },
   ];
 
@@ -85,8 +94,14 @@ export default function DashboardPage() {
             <div className="flex justify-between items-start">
               <div className="flex-1 min-w-0">
                 <p className="text-xs md:text-sm font-medium text-brand-500 leading-tight">{kpi.title}</p>
-                <h3 className="text-lg md:text-2xl font-bold mt-1 md:mt-2 text-brand-900 dark:text-white truncate">{kpi.value}</h3>
-                {kpi.subtext && <p className="text-[10px] md:text-xs text-brand-400 mt-1">{kpi.subtext}</p>}
+                <h3 className="mt-1 md:mt-2 text-base md:text-2xl font-bold leading-tight text-brand-900 dark:text-white whitespace-normal break-words">
+                  {kpi.value}
+                </h3>
+                {kpi.subtext && (
+                  <p className="mt-1 text-[10px] md:text-xs leading-snug text-brand-400 whitespace-normal break-words">
+                    {kpi.subtext}
+                  </p>
+                )}
               </div>
               <div className={`p-2 md:p-3 rounded-xl ${kpi.bg} shrink-0 ml-2`}>
                 <kpi.icon className={`h-5 w-5 md:h-6 md:w-6 ${kpi.color}`} />

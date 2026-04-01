@@ -143,11 +143,18 @@
   }
 
   .lp-sidebar-brand {
-    @apply flex items-center;
+    @apply flex w-full justify-center;
+  }
+
+  .lp-sidebar-logo-wrap {
+    @apply relative h-16 w-[230px] overflow-hidden rounded-xl;
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .lp-sidebar-logo-image {
-    @apply h-14 w-[220px] max-w-full object-cover object-center;
+    @apply absolute left-1/2 top-1/2 h-[220px] w-[360px] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover;
+    filter: brightness(1.18) contrast(1.1) saturate(1.1);
   }
 
   .lp-sidebar-close-btn {

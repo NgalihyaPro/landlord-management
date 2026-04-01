@@ -95,7 +95,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           {/* Logo + Close button */}
           <div className="flex h-20 items-center justify-between px-6">
             <div className="lp-sidebar-brand">
-              <img src="/logo.png" alt="LandlordPro logo" className="lp-sidebar-logo-image" />
+              <div className="lp-sidebar-logo-wrap">
+                <img src="/logo.png" alt="LandlordPro logo" className="lp-sidebar-logo-image" />
+              </div>
             </div>
             {/* Close button - mobile only */}
             <button

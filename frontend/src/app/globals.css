@@ -147,14 +147,18 @@
   }
 
   .lp-sidebar-logo-wrap {
-    @apply relative h-16 w-[230px] overflow-hidden rounded-xl;
-    background-color: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    @apply relative h-20 w-full max-w-[236px] overflow-hidden rounded-2xl;
+    background: linear-gradient(145deg, #f4fbf7, #dbeee5);
+    border: 1px solid #c6ddd1;
+    box-shadow:
+      0 8px 18px rgba(7, 24, 18, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.75);
   }
 
   .lp-sidebar-logo-image {
-    @apply absolute left-1/2 top-1/2 h-[220px] w-[360px] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover;
-    filter: brightness(1.18) contrast(1.1) saturate(1.1);
+    @apply absolute left-1/2 top-1/2 h-full w-full -translate-x-1/2 -translate-y-1/2 object-cover object-center;
+    transform: translate(-50%, -50%) scale(1.6);
+    filter: contrast(1.2) saturate(1.15) brightness(0.95);
   }
 
   .lp-sidebar-close-btn {

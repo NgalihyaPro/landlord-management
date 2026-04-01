@@ -1,4 +1,4 @@
-import { BellIcon, BuildingOfficeIcon, Bars3Icon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { BellIcon, Bars3Icon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
@@ -84,13 +84,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       </h1>
 
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
-        {user?.organization_name && (
-          <div className="hidden items-center gap-2 rounded-full border border-border bg-white px-3 py-1.5 text-sm text-brand-600 shadow-sm lg:flex dark:bg-brand-800 dark:text-brand-200">
-            <BuildingOfficeIcon className="h-4 w-4 text-primary" />
-            <span className="max-w-[180px] truncate font-medium">{user.organization_name}</span>
-          </div>
-        )}
-
         <button
           onClick={toggleTheme}
           className="p-2 rounded-lg text-brand-500 hover:text-primary hover:bg-brand-100 dark:hover:bg-brand-800 transition-colors shrink-0"

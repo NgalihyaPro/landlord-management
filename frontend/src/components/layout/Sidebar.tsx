@@ -85,30 +85,30 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {/* Sidebar panel */}
       <div
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex h-screen w-72 flex-col justify-between border-r border-border bg-white shadow-xl dark:bg-brand-900 glass-panel transition-transform duration-300 ease-in-out',
+          'lp-sidebar-shell fixed inset-y-0 left-0 z-40 flex h-screen w-72 flex-col justify-between border-r shadow-xl transition-transform duration-300 ease-in-out',
           // Mobile: slide in/out; Desktop: always visible
-          'md:relative md:translate-x-0 md:w-64 md:z-auto md:shadow-sm',
+          'md:relative md:translate-x-0 md:w-64 md:z-auto md:shadow-none',
           open ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <div>
           {/* Logo + Close button */}
-          <div className="flex h-16 items-center justify-between px-6 font-bold text-2xl tracking-tight text-primary">
-            <div className="flex items-center gap-2">
-              <BuildingOfficeIcon className="h-8 w-8 text-primary" />
+          <div className="flex h-20 items-center justify-between px-6">
+            <div className="lp-sidebar-brand">
+              <BuildingOfficeIcon className="h-9 w-9" />
               <span>LandlordPro</span>
             </div>
             {/* Close button - mobile only */}
             <button
               onClick={onClose}
-              className="md:hidden p-1.5 rounded-lg hover:bg-brand-100 dark:hover:bg-brand-800 text-brand-400 transition-colors"
+              className="lp-sidebar-close-btn md:hidden"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
           </div>
 
-          <div className="mt-4 flex flex-col gap-1 px-4">
-            <p className="px-2 text-xs font-semibold text-brand-400 mb-2 uppercase tracking-wider">
+          <div className="mt-2 flex flex-col gap-1.5 px-4">
+            <p className="lp-sidebar-section-label">
               {t('sidebar.menu_title')}
             </p>
             {PRIMARY_LINKS.map((link) => {
@@ -121,13 +121,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   onClick={handleNavClick}
                   onMouseEnter={() => prefetchLink(link.href)}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
-                    isActive
-                      ? 'bg-primary text-white shadow-md shadow-primary/20'
-                      : 'text-brand-600 hover:bg-brand-50 hover:text-primary dark:text-brand-300 dark:hover:bg-brand-800'
+                    'lp-sidebar-link',
+                    isActive ? 'lp-sidebar-link-active' : ''
                   )}
                 >
-                  <Icon className={cn('h-5 w-5', isActive ? 'text-white' : 'text-brand-400')} />
+                  <Icon className="lp-sidebar-link-icon" />
                   {t(link.labelKey)}
                 </Link>
               );
@@ -135,8 +133,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         </div>
 
-        <div className="border-t border-border p-4">
-          <div className="flex flex-col gap-1 mb-4">
+        <div className="lp-sidebar-divider border-t p-4">
+          <div className="mb-4 flex flex-col gap-1.5">
             {SECONDARY_LINKS.map((link) => {
               if (link.platformAdminOnly && !user?.is_platform_admin) return null;
               if (link.roles && user && !link.roles.includes(user.role)) return null;
@@ -149,11 +147,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   onClick={handleNavClick}
                   onMouseEnter={() => prefetchLink(link.href)}
                   className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    isActive ? 'bg-brand-100 text-brand-900' : 'text-brand-600 hover:bg-brand-50 dark:text-brand-300'
+                    'lp-sidebar-link',
+                    isActive ? 'lp-sidebar-link-active' : ''
                   )}
                 >
-                  <Icon className="h-5 w-5 text-brand-400" />
+                  <Icon className="lp-sidebar-link-icon" />
                   {t(link.labelKey)}
                 </Link>
               );
@@ -162,22 +160,22 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
           <button
             onClick={() => { onClose(); logout(); }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-danger hover:bg-danger/10 transition-colors"
+            className="lp-sidebar-signout"
           >
             <ArrowRightOnRectangleIcon className="h-5 w-5" />
             {t('common.sign_out')}
           </button>
 
           {user && (
-            <div className="mt-4 flex items-center gap-3 rounded-xl bg-brand-50 p-3 dark:bg-brand-800">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary font-bold text-sm">
+            <div className="lp-sidebar-user-card">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary font-bold text-sm">
                 {user.full_name.charAt(0)}
               </div>
               <div className="flex flex-col overflow-hidden">
-                <span className="truncate text-sm font-semibold text-brand-900 dark:text-white">
+                <span className="truncate text-sm font-semibold text-brand-900 dark:text-brand-100">
                   {user.full_name}
                 </span>
-                <span className="truncate text-xs text-brand-500 capitalize">
+                <span className="truncate text-xs text-brand-500 dark:text-brand-400 capitalize">
                   {user.role}
                 </span>
               </div>

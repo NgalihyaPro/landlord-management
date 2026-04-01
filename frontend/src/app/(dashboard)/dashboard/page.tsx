@@ -57,9 +57,16 @@ export default function DashboardPage() {
   if (!data) return null;
 
   const normalizeCurrency = (value: string) => value.replace(/\u00a0/g, ' ');
+  const formatCountLabel = (count: number, singular: string, plural: string) => `${count} ${count === 1 ? singular : plural}`;
 
   const cards = [
-    { title: td.properties_units, value: `${data.summary.total_properties} / ${data.summary.total_units}`, icon: BuildingOfficeIcon, color: 'text-info', bg: 'bg-info/10' },
+    {
+      title: td.properties_units,
+      value: `${formatCountLabel(data.summary.total_properties, 'Property', 'Properties')} · ${formatCountLabel(data.summary.total_units, 'Unit', 'Units')}`,
+      icon: BuildingOfficeIcon,
+      color: 'text-info',
+      bg: 'bg-info/10',
+    },
     { title: td.active_tenants, value: data.summary.total_tenants, icon: UserGroupIcon, color: 'text-primary', bg: 'bg-primary/10' },
     {
       title: td.monthly_collection,

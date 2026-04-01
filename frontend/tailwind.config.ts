@@ -54,23 +54,23 @@ const config = {
         },
         // Premium brand colors
         brand: {
-          DEFAULT: '#0f172a',  // slate-900
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
+          DEFAULT: '#1b2921',
+          50: '#f8faf7',
+          100: '#edf7f0',
+          200: '#dce8df',
+          300: '#bfd3c5',
+          400: '#94b29f',
+          500: '#6f8f7c',
+          600: '#567260',
+          700: '#415748',
+          800: '#2d3f34',
+          900: '#1b2921',
+          950: '#101a14',
         },
-        success: '#10b981', // emerald-500
-        warning: '#f59e0b', // amber-500
-        danger: '#ef4444',  // red-500
-        info: '#3b82f6',    // blue-500
+        success: '#4a9e6b',
+        warning: '#d97706',
+        danger: '#dc2626',
+        info: '#3f8c73',
       },
       borderRadius: {
         lg: 'var(--radius)',

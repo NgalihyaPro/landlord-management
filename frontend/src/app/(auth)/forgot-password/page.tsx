@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
-  BuildingOfficeIcon,
   EnvelopeIcon,
   ArrowLeftIcon,
   ClipboardDocumentIcon,
@@ -63,12 +62,9 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-brand-50 px-6 py-10 text-brand-900 dark:bg-brand-950 dark:text-white">
       <div className="mx-auto max-w-xl">
-        <div className="mb-8 flex items-center justify-center gap-3 text-primary">
-          <BuildingOfficeIcon className="h-10 w-10" />
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-500 dark:text-brand-400">LandlordPro</p>
-            <h1 className="text-3xl font-extrabold tracking-tight">{tx.title}</h1>
-          </div>
+        <div className="mb-8 flex flex-col items-center justify-center gap-3 text-primary">
+          <img src="/logo.png" alt="LandlordPro logo" className="h-12 w-auto object-contain" />
+          <h1 className="text-3xl font-extrabold tracking-tight">{tx.title}</h1>
         </div>
 
         <div className="rounded-3xl border border-brand-200 bg-white p-8 shadow-xl dark:border-brand-800 dark:bg-brand-900">

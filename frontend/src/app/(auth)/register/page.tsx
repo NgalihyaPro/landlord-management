@@ -139,8 +139,7 @@ export default function RegisterPage() {
             <div className="relative z-10 flex h-full flex-col justify-between">
               <div>
                 <div className="mb-8 flex items-center gap-3">
-                  <BuildingOfficeIcon className="h-10 w-10 text-white" />
-                  <span className="text-2xl font-black tracking-tight">LandlordPro</span>
+                  <img src="/logo.png" alt="LandlordPro logo" className="h-12 w-auto object-contain" />
                 </div>
                 <h1 className="max-w-lg text-5xl font-black leading-tight">
                   {tx.hero_title}
@@ -163,8 +162,7 @@ export default function RegisterPage() {
         <div className="rounded-[32px] border border-brand-200 bg-white p-8 shadow-xl dark:border-brand-800 dark:bg-brand-900 sm:p-10">
           <div className="mb-8">
             <div className="mb-5 flex items-center gap-3 text-primary lg:hidden">
-              <BuildingOfficeIcon className="h-8 w-8" />
-              <span className="text-2xl font-black tracking-tight">LandlordPro</span>
+              <img src="/logo.png" alt="LandlordPro logo" className="h-10 w-auto object-contain" />
             </div>
             <p className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-500">{tx.owner_registration}</p>
             <h2 className="mt-3 text-3xl font-black tracking-tight text-brand-900 dark:text-white">{tx.create_account}</h2>

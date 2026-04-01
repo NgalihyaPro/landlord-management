@@ -36,33 +36,33 @@
   }
 
   .dark {
-    --background: 220 23% 97%;
-    --foreground: 217 19% 27%;
+    --background: 220 22% 10%;
+    --foreground: 220 20% 92%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 217 19% 27%;
+    --card: 220 20% 13%;
+    --card-foreground: 220 20% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 217 19% 27%;
+    --popover: 220 20% 13%;
+    --popover-foreground: 220 20% 92%;
 
-    --primary: 217 33% 32%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 214 72% 61%;
+    --primary-foreground: 220 22% 10%;
 
-    --secondary: 220 20% 95%;
-    --secondary-foreground: 217 19% 27%;
+    --secondary: 220 17% 19%;
+    --secondary-foreground: 220 20% 92%;
 
-    --muted: 220 16% 95%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 16% 17%;
+    --muted-foreground: 220 12% 70%;
 
-    --accent: 220 23% 92%;
-    --accent-foreground: 217 19% 27%;
+    --accent: 220 18% 24%;
+    --accent-foreground: 220 20% 92%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 70% 56%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 33% 32%;
+    --border: 220 15% 24%;
+    --input: 220 15% 24%;
+    --ring: 214 72% 61%;
   }
 }
 
@@ -71,9 +71,13 @@
     @apply border-border;
   }
   body {
-    @apply bg-brand-50 text-brand-900 antialiased selection:bg-primary/20 dark:text-brand-900;
+    @apply bg-brand-50 text-brand-900 antialiased selection:bg-primary/20 dark:text-brand-100;
     background-image: linear-gradient(180deg, #f8f9fb 0%, #f5f6f8 100%);
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  .dark body {
+    background-image: linear-gradient(180deg, #151922 0%, #10151d 100%);
   }
 
   input,
@@ -114,7 +118,7 @@
 
 @layer utilities {
   .glass-panel {
-    @apply bg-white border border-brand-200 shadow-sm;
+    @apply bg-white border border-brand-200 shadow-sm dark:bg-brand-900 dark:border-brand-700;
   }
 
   .soft-section {

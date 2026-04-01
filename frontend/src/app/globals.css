@@ -71,8 +71,20 @@
     @apply border-border;
   }
   body {
-    @apply bg-brand-50 text-brand-900 antialiased selection:bg-primary/20;
+    @apply bg-brand-50 text-brand-900 antialiased selection:bg-primary/20 dark:text-brand-100;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  input,
+  select,
+  textarea {
+    @apply text-brand-900 dark:text-brand-100;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-brand-400;
+    opacity: 1;
   }
   
   /* Custom scrollbar */

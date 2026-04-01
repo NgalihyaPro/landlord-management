@@ -1,21 +1,24 @@
 import { CheckIcon } from '@heroicons/react/24/solid';
-
-const STEPS = [
-  { title: 'Property', description: 'Create the property profile' },
-  { title: 'Unit', description: 'Add a room, apartment, or space' },
-  { title: 'Tenant', description: 'Assign the new tenant' },
-  { title: 'Record Payment', description: 'Capture the first payment' },
-];
+import { useLanguage } from '@/context/LanguageContext';
 
 type SetupFlowStepperProps = {
   currentStep: number;
 };
 
 export default function SetupFlowStepper({ currentStep }: SetupFlowStepperProps) {
+  const { t } = useLanguage();
+  const stepTx = t('setup_flow.steps');
+  const steps = [
+    { title: stepTx.property_title, description: stepTx.property_desc },
+    { title: stepTx.unit_title, description: stepTx.unit_desc },
+    { title: stepTx.tenant_title, description: stepTx.tenant_desc },
+    { title: stepTx.payment_title, description: stepTx.payment_desc },
+  ];
+
   return (
     <div className="rounded-2xl border border-brand-200 bg-white/70 p-4 shadow-sm dark:border-brand-800 dark:bg-brand-900/70">
       <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1">
-        {STEPS.map((step, index) => {
+        {steps.map((step, index) => {
           const isCompleted = index < currentStep;
           const isCurrent = index === currentStep;
 
@@ -38,7 +41,7 @@ export default function SetupFlowStepper({ currentStep }: SetupFlowStepperProps)
                 </p>
                 <p className="text-xs text-brand-500">{step.description}</p>
               </div>
-              {index < STEPS.length - 1 && (
+              {index < steps.length - 1 && (
                 <div className={`hidden h-px flex-1 md:block ${index < currentStep ? 'bg-success' : 'bg-brand-200 dark:bg-brand-700'}`} />
               )}
             </div>

@@ -3,6 +3,7 @@ import api, { getApiErrorMessage, invalidateGetCache } from '@/lib/api';
 import { ArrowLeftIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 
 type TenantFormState = {
   full_name: string;
@@ -22,6 +23,8 @@ const formatDateInputValue = (value?: string | null) => {
 };
 
 export default function TenantEditPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -54,7 +57,7 @@ export default function TenantEditPage() {
           notes: data.notes || '',
         });
       } catch (error) {
-        toast.error(getApiErrorMessage(error, 'Failed to load tenant.'));
+        toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kupakia mpangaji.' : 'Failed to load tenant.'));
       } finally {
         setLoading(false);
       }
@@ -84,10 +87,10 @@ export default function TenantEditPage() {
       invalidateGetCache('/dashboard');
       invalidateGetCache('/notifications');
       invalidateGetCache('/reports');
-      toast.success('Tenant updated successfully.');
+      toast.success(isSw ? 'Mpangaji amesasishwa.' : 'Tenant updated successfully.');
       navigate(`/tenants/${id}`);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to update tenant.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kusasisha mpangaji.' : 'Failed to update tenant.'));
     } finally {
       setSaving(false);
     }
@@ -108,8 +111,8 @@ export default function TenantEditPage() {
           <ArrowLeftIcon className="h-5 w-5 text-brand-600 dark:text-brand-300" />
         </Link>
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Edit Tenant</h2>
-          <p className="text-brand-500">Update tenant profile and lease information</p>
+          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Hariri Mpangaji' : 'Edit Tenant'}</h2>
+          <p className="text-brand-500">{isSw ? 'Sasisha wasifu wa mpangaji na taarifa za mkataba' : 'Update tenant profile and lease information'}</p>
         </div>
       </div>
 
@@ -117,7 +120,7 @@ export default function TenantEditPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Full Name *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Jina Kamili *' : 'Full Name *'}</label>
               <input
                 required
                 name="full_name"
@@ -127,7 +130,7 @@ export default function TenantEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Phone *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Simu *' : 'Phone *'}</label>
               <input
                 required
                 name="phone"
@@ -147,7 +150,7 @@ export default function TenantEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">National ID</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Kitambulisho cha Taifa' : 'National ID'}</label>
               <input
                 name="national_id"
                 value={formData.national_id}
@@ -156,7 +159,7 @@ export default function TenantEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Emergency Contact Name</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Jina la Dharura' : 'Emergency Contact Name'}</label>
               <input
                 name="emergency_contact_name"
                 value={formData.emergency_contact_name}
@@ -165,7 +168,7 @@ export default function TenantEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Emergency Contact Phone</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Simu ya Dharura' : 'Emergency Contact Phone'}</label>
               <input
                 name="emergency_contact_phone"
                 value={formData.emergency_contact_phone}
@@ -174,7 +177,7 @@ export default function TenantEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Monthly Rent *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Kodi ya Mwezi *' : 'Monthly Rent *'}</label>
               <input
                 required
                 type="number"
@@ -186,7 +189,7 @@ export default function TenantEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Lease End Date</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Tarehe ya Mwisho wa Mkataba' : 'Lease End Date'}</label>
               <input
                 type="date"
                 lang="en-GB"
@@ -199,7 +202,7 @@ export default function TenantEditPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-brand-500 uppercase">Notes</label>
+            <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Maelezo' : 'Notes'}</label>
             <textarea
               name="notes"
               value={formData.notes}
@@ -215,7 +218,7 @@ export default function TenantEditPage() {
               onClick={() => navigate(-1)}
               className="px-6 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-100 rounded-lg mr-3 transition-colors dark:text-brand-300 dark:hover:bg-brand-800"
             >
-              Cancel
+              {isSw ? 'Ghairi' : 'Cancel'}
             </button>
             <button
               type="submit"
@@ -227,7 +230,7 @@ export default function TenantEditPage() {
               ) : (
                 <PencilSquareIcon className="h-5 w-5" />
               )}
-              Save Changes
+              {isSw ? 'Hifadhi Mabadiliko' : 'Save Changes'}
             </button>
           </div>
         </form>

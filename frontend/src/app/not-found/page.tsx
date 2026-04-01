@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom';
 import { ExclamationTriangleIcon, HomeIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function NotFoundPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const { user } = useAuth();
   const homeHref = user ? '/dashboard' : '/login';
 
@@ -12,10 +15,12 @@ export default function NotFoundPage() {
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-warning/10 text-warning">
           <ExclamationTriangleIcon className="h-8 w-8" />
         </div>
-        <p className="mt-6 text-sm font-semibold uppercase tracking-[0.25em] text-brand-500">404 Error</p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight text-brand-900 dark:text-white">Page not found</h1>
+        <p className="mt-6 text-sm font-semibold uppercase tracking-[0.25em] text-brand-500">{isSw ? 'KOSA 404' : '404 Error'}</p>
+        <h1 className="mt-3 text-3xl font-black tracking-tight text-brand-900 dark:text-white">{isSw ? 'Ukurasa haujapatikana' : 'Page not found'}</h1>
         <p className="mt-3 text-sm leading-6 text-brand-500">
-          The page you requested does not exist, may have moved, or may no longer be available in this landlord workspace.
+          {isSw
+            ? 'Ukurasa uliotafuta haupo, umehamishwa, au haupatikani tena kwenye workspace hii ya landlord.'
+            : 'The page you requested does not exist, may have moved, or may no longer be available in this landlord workspace.'}
         </p>
         <div className="mt-8 flex justify-center">
           <Link
@@ -23,7 +28,7 @@ export default function NotFoundPage() {
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90"
           >
             <HomeIcon className="h-5 w-5" />
-            Return to {user ? 'dashboard' : 'sign in'}
+            {isSw ? 'Rudi kwenye' : 'Return to'} {user ? (isSw ? 'dashibodi' : 'dashboard') : (isSw ? 'kuingia' : 'sign in')}
           </Link>
         </div>
       </div>

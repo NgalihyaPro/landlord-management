@@ -11,6 +11,7 @@ import {
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import SetupFlowStepper from '@/components/flow/SetupFlowStepper';
+import { useLanguage } from '@/context/LanguageContext';
 
 type TenantOption = {
   id: number;
@@ -38,6 +39,9 @@ const toSafeNumber = (value: unknown) => {
 
 export default function RecordPaymentPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  const tx = t('setup_flow.payment');
+  const common = t('common');
   const [searchParams] = useSearchParams();
   const tenantPickerRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(false);
@@ -70,7 +74,7 @@ export default function RecordPaymentPage() {
         setMethods(methodsRes || []);
       } catch (err) {
         console.error(err);
-        toast.error('Failed to load tenants and payment methods');
+        toast.error(tx.load_options_failed);
       } finally {
         setLoadingOptions(false);
       }
@@ -136,7 +140,7 @@ export default function RecordPaymentPage() {
       }));
     } catch (error) {
       console.error('Failed to load tenant payment totals:', error);
-      toast.error('Failed to load the latest tenant balance due.');
+      toast.error(tx.load_balance_failed);
     }
   };
 
@@ -172,7 +176,7 @@ export default function RecordPaymentPage() {
     e.preventDefault();
 
     if (!formData.tenant_id) {
-      toast.error('Please select a tenant');
+      toast.error(tx.select_tenant_error);
       setIsTenantDropdownOpen(true);
       return;
     }
@@ -192,10 +196,10 @@ export default function RecordPaymentPage() {
       invalidateGetCache('/tenants');
       invalidateGetCache('/notifications');
       invalidateGetCache('/reports');
-      toast.success('Setup flow complete. First payment recorded successfully.');
+      toast.success(tx.saved_toast);
       navigate('/payments');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Failed to record payment');
+      toast.error(err.response?.data?.error || tx.save_failed);
     } finally {
       setLoading(false);
     }
@@ -210,19 +214,19 @@ export default function RecordPaymentPage() {
           <ArrowLeftIcon className="h-5 w-5 text-brand-600 dark:text-brand-300" />
         </Link>
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Record Payment</h2>
-          <p className="text-brand-500">Log incoming rent payments and issue receipts</p>
+          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{tx.title}</h2>
+          <p className="text-brand-500">{tx.subtitle}</p>
         </div>
       </div>
 
       <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-brand-600 dark:text-brand-300">
-        Final step. Record the first payment to complete the guided property setup flow.
+        {tx.step_note}
       </div>
 
       <div className="glass-panel p-6 md:p-8 rounded-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-3">
-            <label className="text-xs font-semibold text-brand-500 uppercase">Select Tenant *</label>
+            <label className="text-xs font-semibold text-brand-500 uppercase">{tx.select_tenant} *</label>
 
             <div ref={tenantPickerRef} className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-3 h-4 w-4 text-brand-400" />
@@ -231,7 +235,7 @@ export default function RecordPaymentPage() {
                 value={tenantSearch}
                 onChange={(e) => handleTenantSearchChange(e.target.value)}
                 onFocus={() => setIsTenantDropdownOpen(true)}
-                placeholder="Search by tenant, property, or unit"
+                placeholder={tx.search_tenant}
                 className="w-full rounded-lg border border-brand-200 bg-white/50 py-2.5 pl-9 pr-10 text-sm dark:border-brand-700 dark:bg-brand-900/50 focus:outline-none focus:border-primary focus:ring-1"
               />
               <ChevronUpDownIcon className="pointer-events-none absolute right-3 top-3 h-5 w-5 text-brand-400" />
@@ -239,7 +243,7 @@ export default function RecordPaymentPage() {
               {isTenantDropdownOpen && (
                 <div className="absolute z-20 mt-2 max-h-72 w-full overflow-auto rounded-xl border border-brand-200 bg-white shadow-xl dark:border-brand-700 dark:bg-brand-900">
                   {loadingOptions ? (
-                    <div className="px-4 py-3 text-sm text-brand-500">Loading tenants...</div>
+                    <div className="px-4 py-3 text-sm text-brand-500">{tx.loading_tenants}</div>
                   ) : filteredTenants.length ? (
                     filteredTenants.map((tenant) => (
                       <button
@@ -253,13 +257,13 @@ export default function RecordPaymentPage() {
                           <p className="text-xs text-brand-500">{tenant.property_name} - Unit {tenant.unit_number}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-xs font-semibold text-brand-500 uppercase">Balance Due</p>
+                          <p className="text-xs font-semibold text-brand-500 uppercase">{tx.balance_due}</p>
                           <p className="text-sm font-bold text-danger">{formatCurrency(toSafeNumber(tenant.outstanding_balance))}</p>
                         </div>
                       </button>
                     ))
                   ) : (
-                    <div className="px-4 py-3 text-sm text-brand-500">No tenants match your search.</div>
+                    <div className="px-4 py-3 text-sm text-brand-500">{tx.no_tenant_match}</div>
                   )}
                 </div>
               )}
@@ -269,7 +273,7 @@ export default function RecordPaymentPage() {
           {selectedTenantInfo && (
             <div className="bg-brand-50 dark:bg-brand-800/50 p-4 rounded-xl border border-brand-200 dark:border-brand-700 flex justify-between items-center gap-4">
               <div>
-                <p className="text-xs text-brand-500 font-semibold uppercase">Expected Monthly Rent</p>
+                <p className="text-xs text-brand-500 font-semibold uppercase">{tx.expected_rent}</p>
                 <p className="font-bold text-brand-900 dark:text-white text-lg">
                   {formatCurrency(toSafeNumber(selectedTenantInfo.monthly_rent))}
                 </p>
@@ -278,7 +282,7 @@ export default function RecordPaymentPage() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-danger font-semibold uppercase">Balance Due</p>
+                <p className="text-xs text-danger font-semibold uppercase">{tx.balance_due}</p>
                 <p className="font-bold text-danger text-lg">
                   {formatCurrency(toSafeNumber(selectedTenantInfo.outstanding_balance))}
                 </p>
@@ -290,7 +294,7 @@ export default function RecordPaymentPage() {
             <div className="space-y-1">
               <label className="text-xs font-semibold text-brand-500 uppercase flex gap-2">
                 <CurrencyDollarIcon className="h-4 w-4 text-success" />
-                Payment Received *
+                {tx.payment_received} *
               </label>
               <input
                 required
@@ -304,7 +308,7 @@ export default function RecordPaymentPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Payment Date *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{tx.payment_date} *</label>
               <input
                 required
                 type="date"
@@ -318,7 +322,7 @@ export default function RecordPaymentPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Payment Method *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{tx.payment_method} *</label>
               <select
                 required
                 name="payment_method_id"
@@ -327,7 +331,7 @@ export default function RecordPaymentPage() {
                 disabled={loadingOptions}
                 className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium disabled:opacity-60"
               >
-                <option value="">{loadingOptions ? 'Loading methods...' : '-- Method --'}</option>
+                <option value="">{loadingOptions ? tx.loading_methods : tx.method_placeholder}</option>
                 {methods.map((method) => (
                   <option key={method.id} value={method.id}>
                     {method.name}
@@ -336,12 +340,12 @@ export default function RecordPaymentPage() {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Reference / Transaction ID</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{tx.reference}</label>
               <input
                 name="reference_number"
                 value={formData.reference_number}
                 onChange={handleChange}
-                placeholder="e.g. TXN-123456"
+                placeholder={tx.reference_placeholder}
                 className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium"
               />
             </div>
@@ -353,7 +357,7 @@ export default function RecordPaymentPage() {
               onClick={() => navigate(-1)}
               className="px-6 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-100 rounded-lg mr-3 transition-colors dark:text-brand-300 dark:hover:bg-brand-800"
             >
-              Cancel
+              {common.cancel}
             </button>
             <button
               type="submit"
@@ -361,7 +365,7 @@ export default function RecordPaymentPage() {
               className="flex items-center gap-2 bg-primary text-white px-8 py-2.5 rounded-lg text-sm font-bold tracking-wide hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-70"
             >
               {loading ? <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckIcon className="h-5 w-5" />}
-              Save Payment
+              {tx.save}
             </button>
           </div>
         </form>

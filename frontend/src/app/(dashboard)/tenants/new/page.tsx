@@ -4,11 +4,15 @@ import { UserPlusIcon, ArrowLeftIcon, CheckIcon } from '@heroicons/react/24/outl
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import SetupFlowStepper from '@/components/flow/SetupFlowStepper';
+import { useLanguage } from '@/context/LanguageContext';
 
 const formatAmount = (value: number) => value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function AddTenantPage() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
+  const tx = t('setup_flow.tenant');
+  const common = t('common');
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [units, setUnits] = useState<any[]>([]);
@@ -107,10 +111,10 @@ export default function AddTenantPage() {
       invalidateGetCache('/dashboard');
       invalidateGetCache('/notifications');
       invalidateGetCache('/reports');
-      toast.success('Tenant saved. Continue to the first payment.');
+      toast.success(tx.saved_toast);
       navigate(`/payments/new?tenant_id=${data.id}`);
     } catch (err: any) {
-      toast.error(getApiErrorMessage(err, 'Failed to add tenant'));
+      toast.error(getApiErrorMessage(err, tx.save_failed));
       setLoading(false);
     }
   };
@@ -124,13 +128,13 @@ export default function AddTenantPage() {
           <ArrowLeftIcon className="h-5 w-5 text-brand-600 dark:text-brand-300" />
         </Link>
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Add New Tenant</h2>
-          <p className="text-brand-500">Register a new tenant and assign them to a unit</p>
+          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{tx.title}</h2>
+          <p className="text-brand-500">{tx.subtitle}</p>
         </div>
       </div>
 
       <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-brand-600 dark:text-brand-300">
-        Step 3 of 4. Register the tenant for the new unit, then the flow will take you directly to recording the first payment.
+        {tx.step_note}
       </div>
 
       <div className="glass-panel p-6 md:p-8 rounded-2xl">
@@ -140,23 +144,23 @@ export default function AddTenantPage() {
           <div>
             <div className="flex items-center gap-2 border-b border-border pb-2 mb-4">
               <UserPlusIcon className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-bold text-brand-900 dark:text-white">Personal Information</h3>
+              <h3 className="text-lg font-bold text-brand-900 dark:text-white">{tx.personal_info}</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Full Name *</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.full_name} *</label>
                 <input required name="full_name" value={formData.full_name} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Phone Number *</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.phone} *</label>
                 <input required type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Email Address</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.email}</label>
                 <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">ID / Passport Number *</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.id_number} *</label>
                 <input required name="id_number" value={formData.id_number} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
             </div>
@@ -165,45 +169,45 @@ export default function AddTenantPage() {
           {/* Section 2: Lease Details */}
           <div>
             <div className="flex items-center gap-2 border-b border-border pb-2 mb-4">
-              <h3 className="text-lg font-bold text-brand-900 dark:text-white">Lease Details</h3>
+              <h3 className="text-lg font-bold text-brand-900 dark:text-white">{tx.lease_details}</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Assign Unit *</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.assign_unit} *</label>
                 <select required name="unit_id" value={formData.unit_id} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium">
-                  <option value="">-- Select Vacant Unit --</option>
+                  <option value="">{tx.select_unit}</option>
                   {units.map((u: any) => (
                     <option key={u.id} value={u.id}>{u.property_name} - Unit {u.unit_number}</option>
                   ))}
                 </select>
                 {formData.unit_id && unitIdFromFlow && (
-                  <p className="text-xs text-brand-500 mt-2">This unit was carried forward from the setup flow.</p>
+                  <p className="text-xs text-brand-500 mt-2">{tx.setup_carry_note}</p>
                 )}
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Monthly Rent *</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.monthly_rent} *</label>
                 <input required type="number" step="0.01" name="monthly_rent" value={formData.monthly_rent} onChange={handleChange} className="w-full px-4 py-2 bg-brand-50 dark:bg-brand-800/80 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Months Rented *</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.months_rented} *</label>
                 <input required type="number" min="1" step="1" name="months_rented" value={formData.months_rented} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Required Amount</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.required_amount}</label>
                 <input readOnly type="text" value={formatAmount(requiredAmount)} className="w-full px-4 py-2 bg-brand-50 dark:bg-brand-800/80 border border-brand-200 dark:border-brand-700 rounded-lg text-sm font-medium text-brand-700 dark:text-brand-100 cursor-not-allowed" />
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Lease Start Date *</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.lease_start} *</label>
                 <input required type="date" lang="en-GB" name="lease_start_date" value={formData.lease_start_date} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-500 uppercase">Lease End Date *</label>
+                <label className="text-xs font-semibold text-brand-500 uppercase">{tx.lease_end} *</label>
                 <input required type="date" lang="en-GB" name="lease_end_date" value={formData.lease_end_date} onChange={handleChange} className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium" />
               </div>
             </div>
@@ -215,7 +219,7 @@ export default function AddTenantPage() {
               onClick={() => navigate(-1)}
               className="px-6 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-100 rounded-lg mr-3 transition-colors dark:text-brand-300 dark:hover:bg-brand-800"
             >
-              Cancel
+              {common.cancel}
             </button>
             <button 
               type="submit" 
@@ -227,7 +231,7 @@ export default function AddTenantPage() {
               ) : (
                 <CheckIcon className="h-5 w-5" />
               )}
-              Register Tenant
+              {tx.register}
             </button>
           </div>
 

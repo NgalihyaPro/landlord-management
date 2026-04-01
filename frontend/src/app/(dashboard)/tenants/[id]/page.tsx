@@ -15,15 +15,16 @@ import {
 } from '@heroicons/react/24/outline';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 
 const formatDateInputValue = (value?: string | null) => {
   if (!value) return '';
   return new Date(value).toISOString().slice(0, 10);
 };
 
-const getLeaseStatus = (leaseEnd?: string | null) => {
+const getLeaseStatus = (leaseEnd: string | null | undefined, isSw: boolean) => {
   if (!leaseEnd) {
-    return { label: 'No lease end date', tone: 'text-brand-500', daysRemaining: null };
+    return { label: isSw ? 'Hakuna tarehe ya mwisho wa mkataba' : 'No lease end date', tone: 'text-brand-500', daysRemaining: null };
   }
 
   const today = new Date();
@@ -35,17 +36,37 @@ const getLeaseStatus = (leaseEnd?: string | null) => {
   const daysRemaining = Math.round((endDate.getTime() - today.getTime()) / 86400000);
 
   if (daysRemaining < 0) {
-    return { label: `${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) === 1 ? '' : 's'} overdue`, tone: 'text-danger', daysRemaining };
+    return {
+      label: isSw
+        ? `Imechelewa kwa siku ${Math.abs(daysRemaining)}`
+        : `${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) === 1 ? '' : 's'} overdue`,
+      tone: 'text-danger',
+      daysRemaining,
+    };
   }
 
   if (daysRemaining <= 30) {
-    return { label: `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`, tone: 'text-warning', daysRemaining };
+    return {
+      label: isSw
+        ? `Zimebaki siku ${daysRemaining}`
+        : `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`,
+      tone: 'text-warning',
+      daysRemaining,
+    };
   }
 
-  return { label: `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`, tone: 'text-success', daysRemaining };
+  return {
+    label: isSw
+      ? `Zimebaki siku ${daysRemaining}`
+      : `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} left`,
+    tone: 'text-success',
+    daysRemaining,
+  };
 };
 
 export default function TenantProfilePage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const { id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -55,6 +76,14 @@ export default function TenantProfilePage() {
   const [extendLeaseOpen, setExtendLeaseOpen] = useState(searchParams.get('focus') === 'lease');
   const [leaseEndInput, setLeaseEndInput] = useState('');
   const [leaseSaving, setLeaseSaving] = useState(false);
+  const getPaymentStatusLabel = (status: string) => {
+    if (!isSw) return status.replace('_', ' ');
+    if (status === 'paid') return 'amelipa';
+    if (status === 'due_soon') return 'inakaribia';
+    if (status === 'overdue') return 'imepitwa';
+    if (status === 'partial') return 'malipo kidogo';
+    return status.replace('_', ' ');
+  };
 
   const fetchTenant = async () => {
     try {
@@ -78,13 +107,13 @@ export default function TenantProfilePage() {
     }
   }, [searchParams]);
 
-  const leaseStatus = useMemo(() => getLeaseStatus(tenant?.lease_end), [tenant?.lease_end]);
+  const leaseStatus = useMemo(() => getLeaseStatus(tenant?.lease_end, isSw), [tenant?.lease_end, isSw]);
 
   const handleExtendLease = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!leaseEndInput) {
-      toast.error('Choose a new lease end date.');
+      toast.error(isSw ? 'Chagua tarehe mpya ya mwisho wa mkataba.' : 'Choose a new lease end date.');
       return;
     }
 
@@ -98,10 +127,10 @@ export default function TenantProfilePage() {
       invalidateGetCache('/notifications');
       invalidateGetCache('/reports');
       await fetchTenant();
-      toast.success('Lease extended. Notifications will clear on the next alerts refresh.');
+      toast.success(isSw ? 'Mkataba umeongezwa. Arifa zitaondoka baada ya kubonyeza refresh ya alerts.' : 'Lease extended. Notifications will clear on the next alerts refresh.');
       setExtendLeaseOpen(false);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to extend lease.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kuongeza mkataba.' : 'Failed to extend lease.'));
     } finally {
       setLeaseSaving(false);
     }
@@ -117,16 +146,16 @@ export default function TenantProfilePage() {
       invalidateGetCache('/notifications');
       invalidateGetCache('/reports');
       invalidateGetCache('/properties');
-      toast.success('Tenant removed successfully.');
+      toast.success(isSw ? 'Mpangaji ameondolewa.' : 'Tenant removed successfully.');
       navigate('/tenants');
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to remove tenant.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kuondoa mpangaji.' : 'Failed to remove tenant.'));
       throw error;
     }
   };
 
   if (loading) return <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mt-20"></div>;
-  if (!tenant) return <div className="text-center mt-20 font-semibold text-brand-500">Tenant not found.</div>;
+  if (!tenant) return <div className="text-center mt-20 font-semibold text-brand-500">{isSw ? 'Mpangaji hajapatikana.' : 'Tenant not found.'}</div>;
 
   return (
     <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
@@ -135,7 +164,7 @@ export default function TenantProfilePage() {
           <ArrowLeftIcon className="h-5 w-5 text-brand-600 dark:text-brand-300" />
         </Link>
         <div className="flex flex-1 items-center justify-between gap-3">
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Tenant Profile</h2>
+          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Wasifu wa Mpangaji' : 'Tenant Profile'}</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -143,14 +172,14 @@ export default function TenantProfilePage() {
               className="inline-flex items-center gap-2 rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-danger/90"
             >
               <TrashIcon className="h-4 w-4" />
-              Delete Tenant
+              {isSw ? 'Futa Mpangaji' : 'Delete Tenant'}
             </button>
             <Link
               to={`/tenants/${id}/edit`}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
             >
               <PencilSquareIcon className="h-4 w-4" />
-              Edit Tenant
+              {isSw ? 'Hariri Mpangaji' : 'Edit Tenant'}
             </Link>
           </div>
         </div>
@@ -171,14 +200,14 @@ export default function TenantProfilePage() {
               </p>
               <div className="mt-3">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusColor(tenant.payment_status)}`}>
-                  {tenant.payment_status.replace('_', ' ')}
+                  {getPaymentStatusLabel(tenant.payment_status)}
                 </span>
               </div>
             </div>
 
             <div className="border-t border-brand-100 dark:border-brand-800 pt-4 space-y-4">
               <div>
-                <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Property</p>
+                <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">{isSw ? 'Mali' : 'Property'}</p>
                 <div className="flex items-start gap-2 mt-1">
                   <MapPinIcon className="h-5 w-5 text-brand-500 shrink-0" />
                   <div>
@@ -187,18 +216,18 @@ export default function TenantProfilePage() {
                         {tenant.property_name}
                       </Link>
                     </p>
-                    <p className="text-xs text-brand-500 mt-0.5">Unit {tenant.unit_number} ({tenant.unit_type})</p>
+                    <p className="text-xs text-brand-500 mt-0.5">{isSw ? 'Chumba' : 'Unit'} {tenant.unit_number} ({tenant.unit_type})</p>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Rent</p>
+                  <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">{isSw ? 'Kodi' : 'Rent'}</p>
                   <p className="font-bold text-brand-900 dark:text-white">{formatCurrency(tenant.monthly_rent)}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Next Due</p>
+                  <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">{isSw ? 'Malipo Yajayo' : 'Next Due'}</p>
                   <p className={`font-bold ${tenant.payment_status === 'overdue' ? 'text-danger' : 'text-brand-900 dark:text-white'}`}>
                     {formatDate(tenant.next_due_date)}
                   </p>
@@ -209,11 +238,11 @@ export default function TenantProfilePage() {
             {tenant.outstanding_balance > 0 && (
               <div className="mt-6 bg-danger/5 border border-danger/10 p-4 rounded-xl flex justify-between items-center text-danger">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-wider">Balance Due</p>
+                  <p className="text-xs font-bold uppercase tracking-wider">{isSw ? 'Salio la Kulipa' : 'Balance Due'}</p>
                   <p className="text-lg font-bold">{formatCurrency(tenant.outstanding_balance)}</p>
                 </div>
                 <Link to="/payments/new" className="px-3 py-1.5 bg-danger text-white text-xs font-bold rounded hover:bg-danger/90 transition-colors shadow-sm">
-                  Pay Now
+                  {isSw ? 'Lipa Sasa' : 'Pay Now'}
                 </Link>
               </div>
             )}
@@ -226,8 +255,8 @@ export default function TenantProfilePage() {
               <div className="flex items-center gap-3">
                 <CalendarDaysIcon className="h-6 w-6 text-primary" />
                 <div>
-                  <h3 className="text-lg font-bold text-brand-900 dark:text-white">Lease Review</h3>
-                  <p className="text-sm text-brand-500">Extend the lease here when an alert sends you to review this tenant.</p>
+                  <h3 className="text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Mapitio ya Mkataba' : 'Lease Review'}</h3>
+                  <p className="text-sm text-brand-500">{isSw ? 'Ongeza mkataba hapa unapopelekwa na arifa kumkagua mpangaji huyu.' : 'Extend the lease here when an alert sends you to review this tenant.'}</p>
                 </div>
               </div>
               <button
@@ -235,22 +264,22 @@ export default function TenantProfilePage() {
                 onClick={() => setExtendLeaseOpen((current) => !current)}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90"
               >
-                {extendLeaseOpen ? 'Close' : 'Extend lease'}
+                {extendLeaseOpen ? (isSw ? 'Funga' : 'Close') : (isSw ? 'Ongeza mkataba' : 'Extend lease')}
               </button>
             </div>
 
             <div className="p-5 space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="rounded-xl border border-border p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">Lease Start</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">{isSw ? 'Mwanzo wa Mkataba' : 'Lease Start'}</p>
                   <p className="mt-2 font-bold text-brand-900 dark:text-white">{formatDate(tenant.lease_start)}</p>
                 </div>
                 <div className="rounded-xl border border-border p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">Current Lease End</p>
-                  <p className="mt-2 font-bold text-brand-900 dark:text-white">{tenant.lease_end ? formatDate(tenant.lease_end) : 'Not set'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">{isSw ? 'Mwisho wa Mkataba wa Sasa' : 'Current Lease End'}</p>
+                  <p className="mt-2 font-bold text-brand-900 dark:text-white">{tenant.lease_end ? formatDate(tenant.lease_end) : (isSw ? 'Haijawekwa' : 'Not set')}</p>
                 </div>
                 <div className="rounded-xl border border-border p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">Lease Status</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">{isSw ? 'Hali ya Mkataba' : 'Lease Status'}</p>
                   <p className={`mt-2 font-bold ${leaseStatus.tone}`}>{leaseStatus.label}</p>
                 </div>
               </div>
@@ -258,7 +287,7 @@ export default function TenantProfilePage() {
               {extendLeaseOpen && (
                 <form onSubmit={handleExtendLease} className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
                   <div>
-                    <label className="text-xs font-semibold uppercase tracking-wider text-brand-500">New lease end date</label>
+                    <label className="text-xs font-semibold uppercase tracking-wider text-brand-500">{isSw ? 'Tarehe mpya ya mwisho wa mkataba' : 'New lease end date'}</label>
                     <input
                       type="date"
                       lang="en-GB"
@@ -270,7 +299,9 @@ export default function TenantProfilePage() {
                   </div>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-sm text-brand-500">
-                      Saving a later end date resolves the lease deadline alert the next time Notifications refreshes.
+                      {isSw
+                        ? 'Kuhifadhi tarehe mpya ya mwisho wa mkataba kutafuta arifa ya deadline baada ya Notifications kufanyiwa refresh.'
+                        : 'Saving a later end date resolves the lease deadline alert the next time Notifications refreshes.'}
                     </p>
                     <button
                       type="submit"
@@ -282,7 +313,7 @@ export default function TenantProfilePage() {
                       ) : (
                         <CheckIcon className="h-4 w-4" />
                       )}
-                      Save lease extension
+                      {isSw ? 'Hifadhi Ongezeko la Mkataba' : 'Save lease extension'}
                     </button>
                   </div>
                 </form>
@@ -293,7 +324,7 @@ export default function TenantProfilePage() {
           <div className="glass-panel rounded-2xl overflow-hidden">
             <div className="p-5 border-b border-border/50 bg-brand-50/50 dark:bg-brand-800/50 flex items-center gap-3">
               <BanknotesIcon className="h-6 w-6 text-primary" />
-              <h3 className="text-lg font-bold text-brand-900 dark:text-white">Payment History</h3>
+              <h3 className="text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Historia ya Malipo' : 'Payment History'}</h3>
             </div>
 
             <div className="p-0">
@@ -306,7 +337,7 @@ export default function TenantProfilePage() {
                           <CreditCardIcon className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="font-bold text-brand-900 dark:text-white text-sm">Rent Payment</p>
+                          <p className="font-bold text-brand-900 dark:text-white text-sm">{isSw ? 'Malipo ya Kodi' : 'Rent Payment'}</p>
                           <p className="text-xs text-brand-500 font-mono mt-0.5">{payment.receipt_number}</p>
                         </div>
                       </div>
@@ -318,7 +349,7 @@ export default function TenantProfilePage() {
 
                       <div className="w-full sm:w-auto text-center sm:text-right">
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border border-success/20 bg-success/10 text-success inline-block">
-                          Completed
+                          {isSw ? 'Imekamilika' : 'Completed'}
                         </span>
                       </div>
                     </div>
@@ -327,7 +358,7 @@ export default function TenantProfilePage() {
               ) : (
                 <div className="p-10 text-center">
                   <BanknotesIcon className="h-12 w-12 text-brand-200 dark:text-brand-700 mx-auto mb-3" />
-                  <p className="text-brand-500 font-medium">No payments recorded yet.</p>
+                  <p className="text-brand-500 font-medium">{isSw ? 'Bado hakuna malipo yaliyorekodiwa.' : 'No payments recorded yet.'}</p>
                 </div>
               )}
             </div>
@@ -339,8 +370,10 @@ export default function TenantProfilePage() {
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleDeleteTenant}
-        title="Delete Tenant"
-        description="Are you sure you want to remove this tenant? The tenant will be deactivated, payment history kept, and the assigned unit will be marked as vacant."
+        title={isSw ? 'Futa Mpangaji' : 'Delete Tenant'}
+        description={isSw
+          ? 'Una uhakika unataka kumuondoa mpangaji huyu? Mpangaji atazimwa, historia ya malipo itabaki, na chumba kitakuwa wazi.'
+          : 'Are you sure you want to remove this tenant? The tenant will be deactivated, payment history kept, and the assigned unit will be marked as vacant.'}
         itemName={tenant.full_name}
       />
     </div>

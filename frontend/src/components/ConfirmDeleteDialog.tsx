@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ConfirmDeleteDialogProps {
   open: boolean;
@@ -21,7 +22,9 @@ export default function ConfirmDeleteDialog({
   itemName,
   warning,
 }: ConfirmDeleteDialogProps) {
+  const { language } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const isSw = language === 'sw';
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -68,7 +71,9 @@ export default function ConfirmDeleteDialog({
               {/* Item name highlight */}
               {itemName && (
                 <div className="bg-brand-50 dark:bg-brand-800/50 border border-brand-200 dark:border-brand-700 rounded-xl px-4 py-3 mb-4">
-                  <p className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-1">Item to delete</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-brand-400 mb-1">
+                    {isSw ? 'Kitu cha kufuta' : 'Item to delete'}
+                  </p>
                   <p className="font-semibold text-brand-900 dark:text-white">{itemName}</p>
                 </div>
               )}
@@ -88,7 +93,7 @@ export default function ConfirmDeleteDialog({
                     disabled={loading}
                     className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border border-brand-200 dark:border-brand-700 text-brand-700 dark:text-brand-300 bg-white dark:bg-brand-800 hover:bg-brand-50 dark:hover:bg-brand-700 transition-colors disabled:opacity-50"
                   >
-                    Cancel
+                    {isSw ? 'Ghairi' : 'Cancel'}
                   </button>
                 </Dialog.Close>
                 <button
@@ -102,10 +107,10 @@ export default function ConfirmDeleteDialog({
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      Deleting...
+                      {isSw ? 'Inafuta...' : 'Deleting...'}
                     </>
                   ) : (
-                    'Yes, Delete'
+                    isSw ? 'Ndiyo, Futa' : 'Yes, Delete'
                   )}
                 </button>
               </div>

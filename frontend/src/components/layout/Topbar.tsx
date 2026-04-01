@@ -17,7 +17,8 @@ interface TopbarProps {
 
 export function Topbar({ onMenuClick }: TopbarProps) {
   const { pathname } = useLocation();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isSw = language === 'sw';
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -37,7 +38,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   const getTitle = () => {
     const key = Object.keys(titleMap).find(k => pathname.startsWith(k));
-    return key ? titleMap[key] : 'Landlord Workspace';
+    return key ? titleMap[key] : 'LandlordPro';
   };
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       <button
         onClick={onMenuClick}
         className="md:hidden p-2 -ml-1 rounded-lg hover:bg-brand-100 dark:hover:bg-brand-800 text-brand-600 dark:text-brand-300 transition-colors shrink-0"
-        aria-label="Open menu"
+        aria-label={isSw ? 'Fungua menyu' : 'Open menu'}
       >
         <Bars3Icon className="h-6 w-6" />
       </button>
@@ -93,7 +94,9 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         <button
           onClick={toggleTheme}
           className="p-2 rounded-lg text-brand-500 hover:text-primary hover:bg-brand-100 dark:hover:bg-brand-800 transition-colors shrink-0"
-          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          aria-label={theme === 'dark'
+            ? (isSw ? 'Badili kwenda mwanga' : 'Switch to light mode')
+            : (isSw ? 'Badili kwenda giza' : 'Switch to dark mode')}
         >
           {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
         </button>

@@ -17,6 +17,7 @@ import api, { cachedGet, getApiErrorMessage, invalidateGetCache } from '@/lib/ap
 import { useAuth } from '@/hooks/useAuth';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 
 type AlertSeverity = 'critical' | 'warning' | 'info' | 'success';
 type AlertCategory =
@@ -84,22 +85,6 @@ const severityStyles: Record<AlertSeverity, string> = {
   success: 'border-success/20 bg-success/10 text-success',
 };
 
-const severityLabels: Record<AlertSeverity, string> = {
-  critical: 'Critical',
-  warning: 'Warning',
-  info: 'Info',
-  success: 'Success',
-};
-
-const categoryLabels: Record<AlertCategory, string> = {
-  overdue_rent: 'Overdue rent',
-  upcoming_rent: 'Upcoming rent',
-  lease_deadline: 'Lease deadline',
-  maintenance: 'Maintenance',
-  property_update: 'Property update',
-  recent_activity: 'Recent activity',
-};
-
 const categoryIcons: Record<AlertCategory, typeof ExclamationTriangleIcon> = {
   overdue_rent: ExclamationTriangleIcon,
   upcoming_rent: ClockIcon,
@@ -110,13 +95,15 @@ const categoryIcons: Record<AlertCategory, typeof ExclamationTriangleIcon> = {
 };
 
 const summaryCards = [
-  { key: 'critical', label: 'Critical', accent: 'text-danger', tone: 'bg-danger/10' },
-  { key: 'overdue_rent', label: 'Overdue rent', accent: 'text-danger', tone: 'bg-danger/10' },
-  { key: 'upcoming_rent', label: 'Upcoming rent', accent: 'text-warning', tone: 'bg-warning/10' },
-  { key: 'lease_deadline', label: 'Lease deadlines', accent: 'text-info', tone: 'bg-info/10' },
+  { key: 'critical', labelKey: 'critical', accent: 'text-danger', tone: 'bg-danger/10' },
+  { key: 'overdue_rent', labelKey: 'overdue_rent', accent: 'text-danger', tone: 'bg-danger/10' },
+  { key: 'upcoming_rent', labelKey: 'upcoming_rent', accent: 'text-warning', tone: 'bg-warning/10' },
+  { key: 'lease_deadline', labelKey: 'lease_deadline', accent: 'text-info', tone: 'bg-info/10' },
 ] as const;
 
 export default function NotificationsPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const { user } = useAuth();
   const [data, setData] = useState<AlertsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,6 +111,20 @@ export default function NotificationsPage() {
   const [markingItemId, setMarkingItemId] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState<'all' | AlertSeverity>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | AlertCategory>('all');
+  const severityLabels: Record<AlertSeverity, string> = {
+    critical: isSw ? 'Muhimu Sana' : 'Critical',
+    warning: isSw ? 'Onyo' : 'Warning',
+    info: isSw ? 'Taarifa' : 'Info',
+    success: isSw ? 'Imefanikiwa' : 'Success',
+  };
+  const categoryLabels: Record<AlertCategory, string> = {
+    overdue_rent: isSw ? 'Kodi imepita muda' : 'Overdue rent',
+    upcoming_rent: isSw ? 'Kodi inayokuja' : 'Upcoming rent',
+    lease_deadline: isSw ? 'Mwisho wa mkataba' : 'Lease deadline',
+    maintenance: isSw ? 'Matengenezo' : 'Maintenance',
+    property_update: isSw ? 'Sasisho la mali' : 'Property update',
+    recent_activity: isSw ? 'Shughuli za karibuni' : 'Recent activity',
+  };
 
   const fetchAlerts = async (force = false) => {
     try {
@@ -131,7 +132,7 @@ export default function NotificationsPage() {
       setData(result);
       return true;
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to load alerts.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kupakia arifa.' : 'Failed to load alerts.'));
       return false;
     } finally {
       setLoading(false);
@@ -149,7 +150,7 @@ export default function NotificationsPage() {
 
     if (success) {
       window.dispatchEvent(new Event('notifications-updated'));
-      toast.success('Alerts refreshed');
+      toast.success(isSw ? 'Arifa zimehuishwa' : 'Alerts refreshed');
     }
   };
 
@@ -161,9 +162,9 @@ export default function NotificationsPage() {
       setLoading(true);
       await fetchAlerts(true);
       window.dispatchEvent(new Event('notifications-updated'));
-      toast.success('All notifications marked as read.');
+      toast.success(isSw ? 'Arifa zote zimesomwa.' : 'All notifications marked as read.');
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to mark notifications as read.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kuweka arifa kuwa zimesomwa.' : 'Failed to mark notifications as read.'));
     } finally {
       setMarkingAllRead(false);
     }
@@ -185,9 +186,9 @@ export default function NotificationsPage() {
       setLoading(true);
       await fetchAlerts(true);
       window.dispatchEvent(new Event('notifications-updated'));
-      toast.success('Notification marked as read.');
+      toast.success(isSw ? 'Arifa imewekwa kuwa imesomwa.' : 'Notification marked as read.');
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to update notification.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kusasisha arifa.' : 'Failed to update notification.'));
     } finally {
       setMarkingItemId(null);
     }
@@ -216,24 +217,28 @@ export default function NotificationsPage() {
           <div className="max-w-3xl space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
               <BellAlertIcon className="h-4 w-4" />
-              Alerts Center
+              {isSw ? 'Kituo cha Arifa' : 'Alerts Center'}
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-brand-900 dark:text-white">Real-time property attention board</h2>
+              <h2 className="text-3xl font-bold text-brand-900 dark:text-white">{isSw ? 'Ubao wa ufuatiliaji wa mali kwa muda halisi' : 'Real-time property attention board'}</h2>
               <p className="mt-2 text-sm text-brand-500">
-                Tenant balances, payment schedules, lease dates, maintenance flags, and occupancy gaps are checked every time this page loads.
+                {isSw
+                  ? 'Salio la wapangaji, ratiba za malipo, tarehe za mikataba, matengenezo na nafasi wazi hukaguliwa kila ukurasa huu unapofunguliwa.'
+                  : 'Tenant balances, payment schedules, lease dates, maintenance flags, and occupancy gaps are checked every time this page loads.'}
               </p>
             </div>
             {data && (
               <p className="text-sm text-brand-500">
-                Rent reminders open {data.settings.reminder_days} days before due dates and lease reminders open {data.settings.lease_reminder_days} days before lease end.
+                {isSw
+                  ? `Vikumbusho vya kodi hufunguka siku ${data.settings.reminder_days} kabla ya tarehe ya malipo na vikumbusho vya mkataba hufunguka siku ${data.settings.lease_reminder_days} kabla ya mwisho wa mkataba.`
+                  : `Rent reminders open ${data.settings.reminder_days} days before due dates and lease reminders open ${data.settings.lease_reminder_days} days before lease end.`}
               </p>
             )}
           </div>
 
           <div className="flex flex-wrap gap-3">
             <div className="rounded-2xl border border-border bg-white/80 px-4 py-3 shadow-sm dark:bg-brand-900/60">
-              <p className="text-xs uppercase tracking-[0.2em] text-brand-400">Active alerts</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-brand-400">{isSw ? 'Arifa hai' : 'Active alerts'}</p>
               <p className="mt-1 text-2xl font-bold text-brand-900 dark:text-white">{data?.summary.active ?? 0}</p>
             </div>
             <button
@@ -241,7 +246,7 @@ export default function NotificationsPage() {
               onClick={refreshAlerts}
               className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90"
             >
-              Refresh feed
+              {isSw ? 'Huisha upya' : 'Refresh feed'}
             </button>
             <button
               type="button"
@@ -249,7 +254,7 @@ export default function NotificationsPage() {
               disabled={markingAllRead}
               className="rounded-2xl border border-border bg-white px-4 py-3 text-sm font-semibold text-brand-700 shadow-sm transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 dark:bg-brand-900 dark:text-brand-200"
             >
-              {markingAllRead ? 'Marking...' : 'Mark All as Read'}
+              {markingAllRead ? (isSw ? 'Inaweka...' : 'Marking...') : (isSw ? 'Weka Zote Zimesomwa' : 'Mark All as Read')}
             </button>
           </div>
         </div>
@@ -258,10 +263,10 @@ export default function NotificationsPage() {
       {!hasSmsPhone && (
         <section className="rounded-2xl border border-warning/40 bg-warning/10 px-5 py-4">
           <p className="text-sm font-medium text-brand-800 dark:text-brand-100">
-            Add your phone number in Profile Settings to receive SMS alerts.
+            {isSw ? 'Ongeza namba yako ya simu kwenye Mipangilio ya Wasifu ili upokee arifa za SMS.' : 'Add your phone number in Profile Settings to receive SMS alerts.'}
           </p>
           <Link to="/settings" className="mt-2 inline-flex text-sm font-semibold text-warning hover:underline">
-            Open profile settings
+            {isSw ? 'Fungua mipangilio ya wasifu' : 'Open profile settings'}
           </Link>
         </section>
       )}
@@ -271,7 +276,7 @@ export default function NotificationsPage() {
           <div key={card.key} className="glass-panel rounded-2xl p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-brand-500">{card.label}</p>
+                <p className="text-sm text-brand-500">{categoryLabels[card.labelKey as AlertCategory] || severityLabels[card.labelKey as AlertSeverity]}</p>
                 <p className="mt-2 text-3xl font-bold text-brand-900 dark:text-white">{data?.summary[card.key] ?? 0}</p>
               </div>
               <div className={cn('rounded-2xl p-3', card.tone)}>
@@ -287,12 +292,12 @@ export default function NotificationsPage() {
           <div className="glass-panel rounded-2xl p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h3 className="text-lg font-bold text-brand-900 dark:text-white">Live alerts</h3>
-                <p className="text-sm text-brand-500">Filter urgent items and jump straight to the affected tenant or property.</p>
+                <h3 className="text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Arifa za moja kwa moja' : 'Live alerts'}</h3>
+                <p className="text-sm text-brand-500">{isSw ? 'Chuja taarifa muhimu na nenda moja kwa moja kwa mpangaji au mali iliyoathirika.' : 'Filter urgent items and jump straight to the affected tenant or property.'}</p>
               </div>
               <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-500">
                 <FunnelIcon className="h-4 w-4" />
-                Filters
+                {isSw ? 'Vichujio' : 'Filters'}
               </div>
             </div>
 
@@ -309,7 +314,7 @@ export default function NotificationsPage() {
                       : 'border-border bg-white text-brand-600 hover:border-primary/40 hover:text-primary dark:bg-brand-900'
                   )}
                 >
-                  {value === 'all' ? 'All severities' : severityLabels[value]}
+                  {value === 'all' ? (isSw ? 'Ukali wote' : 'All severities') : severityLabels[value]}
                 </button>
               ))}
             </div>
@@ -327,7 +332,7 @@ export default function NotificationsPage() {
                       : 'border-border bg-white text-brand-600 hover:border-brand-400 hover:text-brand-900 dark:bg-brand-900'
                   )}
                 >
-                  {value === 'all' ? 'All categories' : categoryLabels[value]}
+                  {value === 'all' ? (isSw ? 'Makundi yote' : 'All categories') : categoryLabels[value]}
                 </button>
               ))}
             </div>
@@ -341,8 +346,8 @@ export default function NotificationsPage() {
             ) : filteredAlerts.length === 0 ? (
               <div className="glass-panel rounded-2xl p-12 text-center">
                 <CheckCircleIcon className="mx-auto h-12 w-12 text-success" />
-                <h3 className="mt-4 text-lg font-bold text-brand-900 dark:text-white">No alerts match these filters</h3>
-                <p className="mt-2 text-sm text-brand-500">Try broadening the filters or refresh the feed to pull the latest monitoring results.</p>
+                <h3 className="mt-4 text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Hakuna arifa zinazolingana na vichujio hivi' : 'No alerts match these filters'}</h3>
+                <p className="mt-2 text-sm text-brand-500">{isSw ? 'Panua vichujio au huisha upya feed ili kupata matokeo mapya ya ufuatiliaji.' : 'Try broadening the filters or refresh the feed to pull the latest monitoring results.'}</p>
               </div>
             ) : (
               filteredAlerts.map((alert) => {
@@ -385,7 +390,7 @@ export default function NotificationsPage() {
                             {alert.unit?.unit_number && (
                               <span className="inline-flex items-center gap-2 rounded-full bg-brand-100 px-3 py-1 dark:bg-brand-800">
                                 <HomeModernIcon className="h-4 w-4" />
-                                Unit {alert.unit.unit_number}
+                                {isSw ? 'Chumba' : 'Unit'} {alert.unit.unit_number}
                               </span>
                             )}
                             {alert.due_date && (
@@ -398,7 +403,7 @@ export default function NotificationsPage() {
 
                           {typeof alert.metrics?.amount === 'number' && (
                             <p className="text-sm font-semibold text-brand-900 dark:text-white">
-                              Amount involved: {formatCurrency(alert.metrics.amount)}
+                              {isSw ? 'Kiasi kinachohusika:' : 'Amount involved:'} {formatCurrency(alert.metrics.amount)}
                             </p>
                           )}
                         </div>
@@ -406,14 +411,14 @@ export default function NotificationsPage() {
 
                       <div className="flex min-w-[170px] flex-col items-start gap-3 md:items-end">
                         <p className="text-xs uppercase tracking-[0.2em] text-brand-400">
-                          {alert.created_at ? formatDate(alert.created_at) : 'Live'}
+                          {alert.created_at ? formatDate(alert.created_at) : (isSw ? 'Moja kwa moja' : 'Live')}
                         </p>
                         {alert.action_url && (
                           <Link
                             to={alert.action_url}
                             className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
                           >
-                            {alert.action_label || 'Open'}
+                            {alert.action_label || (isSw ? 'Fungua' : 'Open')}
                           </Link>
                         )}
                       </div>
@@ -428,14 +433,14 @@ export default function NotificationsPage() {
         <div className="space-y-6">
           <section className="glass-panel rounded-2xl p-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-brand-900 dark:text-white">Recent activity</h3>
-              <span className="text-xs uppercase tracking-[0.2em] text-brand-400">Stored feed</span>
+              <h3 className="text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Shughuli za karibuni' : 'Recent activity'}</h3>
+              <span className="text-xs uppercase tracking-[0.2em] text-brand-400">{isSw ? 'Hifadhi ya feed' : 'Stored feed'}</span>
             </div>
 
             <div className="mt-4 space-y-3">
               {recentActivity.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-brand-500">
-                  New payments and system notifications will appear here as activity comes in.
+                  {isSw ? 'Malipo mapya na arifa za mfumo zitaonekana hapa shughuli zinapoingia.' : 'New payments and system notifications will appear here as activity comes in.'}
                 </p>
               ) : (
                 recentActivity.map((item) => {
@@ -458,7 +463,7 @@ export default function NotificationsPage() {
                           <div className="mt-3 flex flex-wrap items-center gap-3">
                             {item.action_url && (
                               <Link to={item.action_url} className="inline-flex text-sm font-semibold text-primary hover:underline">
-                                {item.action_label || 'Open'}
+                                {item.action_label || (isSw ? 'Fungua' : 'Open')}
                               </Link>
                             )}
                             {!item.is_read && extractStoredActivityId(item.id) && (
@@ -468,7 +473,7 @@ export default function NotificationsPage() {
                                 disabled={markingItemId === item.id}
                                 className="inline-flex rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-brand-600 transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-60 dark:text-brand-300"
                               >
-                                {markingItemId === item.id ? 'Marking...' : 'Mark as Read'}
+                                {markingItemId === item.id ? (isSw ? 'Inaweka...' : 'Marking...') : (isSw ? 'Weka imesomwa' : 'Mark as Read')}
                               </button>
                             )}
                           </div>

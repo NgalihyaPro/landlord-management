@@ -35,8 +35,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       if (result && result[key] !== undefined) {
         result = result[key];
       } else {
-        console.warn(`Translation missing for key: ${path} in language: ${language}`);
-        return path;
+        let fallback: any = translations.en;
+        for (const fallbackKey of keys) {
+          if (fallback && fallback[fallbackKey] !== undefined) {
+            fallback = fallback[fallbackKey];
+          } else {
+            console.warn(`Translation missing for key: ${path} in language: ${language}`);
+            return path;
+          }
+        }
+        return fallback;
       }
     }
     return result;

@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import api, { getApiErrorMessage } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/context/LanguageContext';
 
 type InviteDetails = {
   email: string;
@@ -25,6 +26,8 @@ export default function RegisterPage() {
   const { token } = useParams();
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLanguage();
+  const tx = t('auth.register');
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(Boolean(token));
   const [invite, setInvite] = useState<InviteDetails | null>(null);
@@ -58,7 +61,7 @@ export default function RegisterPage() {
           email: data.email,
         }));
       } catch (error) {
-        setErrorMessage(getApiErrorMessage(error, 'Registration invite is invalid or expired.'));
+        setErrorMessage(getApiErrorMessage(error, tx.invite_invalid));
       } finally {
         setInviteLoading(false);
       }
@@ -78,22 +81,22 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (!token) {
-      setErrorMessage('A secure registration invite link is required.');
+      setErrorMessage(tx.invite_required);
       return;
     }
 
     if (!formData.full_name || !formData.business_name || !formData.email || !formData.password) {
-      setErrorMessage('Owner name, business name, email, and password are required.');
+      setErrorMessage(tx.required_fields);
       return;
     }
 
     if (formData.password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters long.');
+      setErrorMessage(tx.password_length);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+      setErrorMessage(tx.password_mismatch);
       return;
     }
 
@@ -110,7 +113,7 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      toast.success(data.message || 'Landlord account created successfully.');
+      toast.success(data.message || tx.success);
       if (data.user) {
         login(data.user);
         navigate('/dashboard', { replace: true });
@@ -118,7 +121,7 @@ export default function RegisterPage() {
         navigate('/login', { replace: true });
       }
     } catch (err: any) {
-      const message = getApiErrorMessage(err, 'Failed to create landlord account.');
+      const message = getApiErrorMessage(err, tx.failed);
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -140,19 +143,18 @@ export default function RegisterPage() {
                   <span className="text-2xl font-black tracking-tight">LandlordPro</span>
                 </div>
                 <h1 className="max-w-lg text-5xl font-black leading-tight">
-                  Create your landlord workspace from a secure invite, then invite your team when you are ready.
+                  {tx.hero_title}
                 </h1>
                 <p className="mt-5 max-w-xl text-lg leading-8 text-brand-100/90">
-                  Each landlord gets a separate organization, private data, and invite-only staff access so properties,
-                  tenants, payments, and reports stay under the correct account from the moment your workspace is created.
+                  {tx.hero_desc}
                 </p>
               </div>
 
               <div className="grid gap-4 text-sm text-brand-100/90">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Landlord owner registration is invite only.</div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Each secure invite creates one landlord workspace and one owner account.</div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Managers and staff join later through secure invite links.</div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Your organization settings, payment methods, and reports are prepared automatically.</div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">{tx.bullet_invite_only}</div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">{tx.bullet_workspace}</div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">{tx.bullet_staff}</div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">{tx.bullet_ready}</div>
               </div>
             </div>
           </div>
@@ -164,12 +166,12 @@ export default function RegisterPage() {
               <BuildingOfficeIcon className="h-8 w-8" />
               <span className="text-2xl font-black tracking-tight">LandlordPro</span>
             </div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-500">Owner Registration</p>
-            <h2 className="mt-3 text-3xl font-black tracking-tight text-brand-900 dark:text-white">Create Your Landlord Account</h2>
+            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-500">{tx.owner_registration}</p>
+            <h2 className="mt-3 text-3xl font-black tracking-tight text-brand-900 dark:text-white">{tx.create_account}</h2>
             <p className="mt-2 text-sm text-brand-500">
               {token
-                ? 'Complete your invited landlord registration to create your workspace.'
-                : 'This page is invite only. Ask the platform administrator for your secure registration link.'}
+                ? tx.invite_complete
+                : tx.invite_only_notice}
             </p>
           </div>
 
@@ -180,7 +182,7 @@ export default function RegisterPage() {
           ) : !token || !invite ? (
             <div className="space-y-5">
               <div className="rounded-2xl border border-warning/20 bg-warning/5 px-5 py-4 text-sm text-brand-700 dark:text-brand-200">
-                A valid landlord registration invite is required before this form will open.
+                {tx.invalid_invite_required}
               </div>
               {errorMessage && (
                 <div className="rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm font-medium text-danger">
@@ -188,17 +190,17 @@ export default function RegisterPage() {
                 </div>
               )}
               <div className="rounded-2xl border border-brand-200 bg-brand-50 px-5 py-4 text-sm text-brand-600 dark:border-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                Contact the platform administrator and ask them to send you your landlord onboarding link by email, WhatsApp, or another secure channel.
+                {tx.contact_admin}
               </div>
             </div>
           ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="rounded-2xl border border-success/20 bg-success/5 px-4 py-3 text-sm text-brand-700 dark:text-brand-200">
-              This secure registration link was prepared for <span className="font-semibold">{invite.email}</span>.
+              {tx.secure_link_for} <span className="font-semibold">{invite.email}</span>.
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Owner Full Name</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.owner_name}</label>
                 <div className="relative mt-1">
                   <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
                   <input
@@ -212,7 +214,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Owner Phone</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.owner_phone}</label>
                 <div className="relative mt-1">
                   <PhoneIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
                   <input
@@ -226,7 +228,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Business Email</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.business_email}</label>
               <div className="relative mt-1">
                 <EnvelopeIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
                 <input
@@ -240,7 +242,7 @@ export default function RegisterPage() {
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Business Name</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.business_name}</label>
                 <div className="relative mt-1">
                   <BuildingOfficeIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
                   <input
@@ -254,7 +256,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Business Phone</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.business_phone}</label>
                 <div className="relative mt-1">
                   <PhoneIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
                   <input
@@ -268,7 +270,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Business Address</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.business_address}</label>
               <div className="relative mt-1">
                 <MapPinIcon className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-brand-400" />
                 <textarea
@@ -283,7 +285,7 @@ export default function RegisterPage() {
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Password</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.password}</label>
                 <div className="relative mt-1">
                   <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
                   <input
@@ -304,7 +306,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Confirm Password</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.confirm_password}</label>
                 <div className="relative mt-1">
                   <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
                   <input
@@ -336,15 +338,15 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {loading ? 'Creating landlord account...' : 'Create Landlord Account'}
+              {loading ? tx.creating : tx.create_button}
             </button>
           </form>
           )}
 
           <p className="mt-6 text-center text-sm text-brand-500">
-            Already have an account?{' '}
+            {tx.already_have_account}{' '}
             <Link to="/login" className="font-semibold text-primary hover:text-primary/80">
-              Sign in here
+              {tx.signin_here}
             </Link>
           </p>
         </div>

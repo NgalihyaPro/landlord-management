@@ -4,8 +4,11 @@ import { ShieldCheckIcon, PlusIcon, XMarkIcon, ClipboardDocumentIcon } from '@he
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import type { RoleOption, StaffUser } from '@/types/user';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function UsersPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,10 +98,14 @@ export default function UsersPage() {
       setInviteLink(data.setup_link || '');
       const refreshedUsers = await cachedGet<StaffUser[]>('/users', { force: true });
       setUsers(refreshedUsers);
-      toast.success(data.setup_link ? 'Staff invitation email sent. Development link is available below.' : 'Staff invitation email sent successfully.');
+      toast.success(
+        data.setup_link
+          ? (isSw ? 'Barua ya mualiko wa mtumishi imetumwa. Kiungo cha maendeleo kipo hapa chini.' : 'Staff invitation email sent. Development link is available below.')
+          : (isSw ? 'Barua ya mualiko wa mtumishi imetumwa.' : 'Staff invitation email sent successfully.')
+      );
       resetForm();
     } catch (err: any) {
-      toast.error(getApiErrorMessage(err, 'Failed to create invitation'));
+      toast.error(getApiErrorMessage(err, isSw ? 'Imeshindikana kuunda mualiko' : 'Failed to create invitation'));
     } finally {
       setSubmitting(false);
     }
@@ -121,10 +128,10 @@ export default function UsersPage() {
       invalidateGetCache('/users');
       const refreshedUsers = await cachedGet<StaffUser[]>('/users', { force: true });
       setUsers(refreshedUsers);
-      toast.success('User access updated successfully');
+      toast.success(isSw ? 'Ruhusa za mtumiaji zimesasishwa.' : 'User access updated successfully');
       closeEditModal();
     } catch (err: any) {
-      toast.error(getApiErrorMessage(err, 'Failed to update user access'));
+      toast.error(getApiErrorMessage(err, isSw ? 'Imeshindikana kusasisha ruhusa za mtumiaji' : 'Failed to update user access'));
     } finally {
       setSubmitting(false);
     }
@@ -135,9 +142,9 @@ export default function UsersPage() {
 
     try {
       await navigator.clipboard.writeText(inviteLink);
-      toast.success('Invitation link copied');
+      toast.success(isSw ? 'Kiungo cha mualiko kimenakiliwa' : 'Invitation link copied');
     } catch {
-      toast.error('Failed to copy invitation link');
+      toast.error(isSw ? 'Imeshindikana kunakili kiungo cha mualiko' : 'Failed to copy invitation link');
     }
   };
 
@@ -147,15 +154,19 @@ export default function UsersPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-end">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">Staff Management</h2>
-          <p className="text-sm text-brand-500">Invite staff members, control roles, and monitor account setup status</p>
+          <h2 className="text-xl md:text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Usimamizi wa Watumishi' : 'Staff Management'}</h2>
+          <p className="text-sm text-brand-500">
+            {isSw
+              ? 'Alika watumishi, dhibiti majukumu, na fuatilia hali ya usajili wa akaunti'
+              : 'Invite staff members, control roles, and monitor account setup status'}
+          </p>
         </div>
         <button
           onClick={openInviteModal}
           className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm"
         >
           <PlusIcon className="h-5 w-5" />
-          Invite Staff
+          {isSw ? 'Alika Mtumishi' : 'Invite Staff'}
         </button>
       </div>
 
@@ -164,12 +175,12 @@ export default function UsersPage() {
           <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-brand-50/50 dark:bg-brand-800/50 border-b border-border/50 text-xs uppercase tracking-wider text-brand-500">
-                <th className="px-6 py-4 font-semibold">User</th>
-                <th className="px-6 py-4 font-semibold">Contact Info</th>
-                <th className="px-6 py-4 font-semibold">Access Role</th>
-                <th className="px-6 py-4 font-semibold text-center">Status</th>
-                <th className="px-6 py-4 font-semibold">Last Activity</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                <th className="px-6 py-4 font-semibold">{isSw ? 'Mtumiaji' : 'User'}</th>
+                <th className="px-6 py-4 font-semibold">{isSw ? 'Mawasiliano' : 'Contact Info'}</th>
+                <th className="px-6 py-4 font-semibold">{isSw ? 'Wajibu wa Ufikiaji' : 'Access Role'}</th>
+                <th className="px-6 py-4 font-semibold text-center">{isSw ? 'Hali' : 'Status'}</th>
+                <th className="px-6 py-4 font-semibold">{isSw ? 'Shughuli ya Mwisho' : 'Last Activity'}</th>
+                <th className="px-6 py-4 font-semibold text-right">{isSw ? 'Hatua' : 'Actions'}</th>
               </tr>
             </thead>
             <tbody className="text-sm text-brand-700 dark:text-brand-300 divide-y divide-border/50">
@@ -203,34 +214,36 @@ export default function UsersPage() {
                           ? 'bg-success/10 text-success border-success/20'
                           : 'bg-brand-100 text-brand-500 border-border'
                     }`}>
-                      {u.invitation_pending ? 'Invite Pending' : u.is_active ? 'Active' : 'Disabled'}
+                      {u.invitation_pending ? (isSw ? 'Mualiko Unasubiri' : 'Invite Pending') : u.is_active ? (isSw ? 'Inatumika' : 'Active') : (isSw ? 'Imezimwa' : 'Disabled')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
                     {u.invitation_pending ? (
                       <div>
-                        <p className="font-medium text-brand-900 dark:text-white">Invite expires {u.invite_expires_at ? formatDate(u.invite_expires_at) : 'soon'}</p>
-                        <p className="text-xs text-brand-500">Waiting for password setup</p>
+                        <p className="font-medium text-brand-900 dark:text-white">
+                          {isSw ? 'Mualiko unaisha' : 'Invite expires'} {u.invite_expires_at ? formatDate(u.invite_expires_at) : (isSw ? 'hivi karibuni' : 'soon')}
+                        </p>
+                        <p className="text-xs text-brand-500">{isSw ? 'Inasubiri kuweka nenosiri' : 'Waiting for password setup'}</p>
                       </div>
                     ) : u.last_login ? (
                       <div>
                         <p className="font-medium text-brand-900 dark:text-white">{formatDate(u.last_login)}</p>
-                        <p className="text-xs text-brand-500">Last login</p>
+                        <p className="text-xs text-brand-500">{isSw ? 'Kuingia kwa mwisho' : 'Last login'}</p>
                       </div>
                     ) : (
-                      <span className="text-xs text-brand-500">No login yet</span>
+                      <span className="text-xs text-brand-500">{isSw ? 'Bado hajaingia' : 'No login yet'}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
                     {u.invitation_pending ? (
-                      <span className="text-xs font-semibold text-warning">Awaiting activation</span>
+                      <span className="text-xs font-semibold text-warning">{isSw ? 'Inasubiri kuamilishwa' : 'Awaiting activation'}</span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => openEditModal(u)}
                         className="text-primary hover:text-primary/70 font-semibold text-sm transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       >
-                        Edit Access
+                        {isSw ? 'Hariri Ufikiaji' : 'Edit Access'}
                       </button>
                     )}
                   </td>
@@ -246,8 +259,12 @@ export default function UsersPage() {
           <div className="w-full max-w-xl rounded-3xl bg-white p-8 shadow-2xl dark:bg-brand-900">
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <h3 className="text-2xl font-bold text-brand-900 dark:text-white">Invite Staff Member</h3>
-                <p className="mt-1 text-sm text-brand-500">Send a secure setup email instead of setting a password manually. In development, the direct setup link is also shown below.</p>
+                <h3 className="text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Alika Mtumishi' : 'Invite Staff Member'}</h3>
+                <p className="mt-1 text-sm text-brand-500">
+                  {isSw
+                    ? 'Tuma barua pepe salama ya kuanzisha akaunti badala ya kuweka nenosiri kwa mkono. Kwenye development, kiungo cha moja kwa moja pia kinaonyeshwa chini.'
+                    : 'Send a secure setup email instead of setting a password manually. In development, the direct setup link is also shown below.'}
+                </p>
               </div>
               <button onClick={closeInviteModal} className="rounded-full p-2 text-brand-400 hover:bg-brand-100 hover:text-brand-700 dark:hover:bg-brand-800 dark:hover:text-white">
                 <XMarkIcon className="h-5 w-5" />
@@ -256,7 +273,7 @@ export default function UsersPage() {
 
             <form onSubmit={handleInviteUser} className="space-y-5">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Full Name</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Jina Kamili' : 'Full Name'}</label>
                 <input
                   value={formData.full_name}
                   onChange={(e) => setFormData((current) => ({ ...current, full_name: e.target.value }))}
@@ -267,7 +284,7 @@ export default function UsersPage() {
 
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Email Address</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Barua Pepe' : 'Email Address'}</label>
                   <input
                     type="email"
                     value={formData.email}
@@ -277,7 +294,7 @@ export default function UsersPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Phone Number</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Namba ya Simu' : 'Phone Number'}</label>
                   <input
                     value={formData.phone}
                     onChange={(e) => setFormData((current) => ({ ...current, phone: e.target.value }))}
@@ -287,7 +304,7 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Role</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Wajibu' : 'Role'}</label>
                 <select
                   value={formData.role_id}
                   onChange={(e) => setFormData((current) => ({ ...current, role_id: e.target.value }))}
@@ -303,7 +320,7 @@ export default function UsersPage() {
 
               {inviteLink && (
                 <div className="rounded-2xl border border-success/20 bg-success/5 p-4">
-                  <p className="text-sm font-semibold text-success">Development setup link</p>
+                  <p className="text-sm font-semibold text-success">{isSw ? 'Kiungo cha kuanzisha akaunti (development)' : 'Development setup link'}</p>
                   <p className="mt-2 break-all text-sm text-brand-700 dark:text-brand-200">{inviteLink}</p>
                   <button
                     type="button"
@@ -311,7 +328,7 @@ export default function UsersPage() {
                     className="mt-3 inline-flex items-center gap-2 rounded-lg bg-success px-3 py-2 text-sm font-semibold text-white hover:bg-success/90"
                   >
                     <ClipboardDocumentIcon className="h-4 w-4" />
-                    Copy Setup Link
+                    {isSw ? 'Nakili Kiungo' : 'Copy Setup Link'}
                   </button>
                 </div>
               )}
@@ -322,14 +339,14 @@ export default function UsersPage() {
                   onClick={closeInviteModal}
                   className="rounded-xl px-5 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-100 dark:text-brand-300 dark:hover:bg-brand-800"
                 >
-                  Close
+                  {isSw ? 'Funga' : 'Close'}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {submitting ? 'Sending invite...' : 'Send Invitation Email'}
+                  {submitting ? (isSw ? 'Inatuma mualiko...' : 'Sending invite...') : (isSw ? 'Tuma Mualiko kwa Barua Pepe' : 'Send Invitation Email')}
                 </button>
               </div>
             </form>
@@ -342,8 +359,8 @@ export default function UsersPage() {
           <div className="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl dark:bg-brand-900">
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <h3 className="text-2xl font-bold text-brand-900 dark:text-white">Edit User Access</h3>
-                <p className="mt-1 text-sm text-brand-500">Update the staff role and whether this account can sign in.</p>
+                <h3 className="text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Hariri Ufikiaji wa Mtumiaji' : 'Edit User Access'}</h3>
+                <p className="mt-1 text-sm text-brand-500">{isSw ? 'Sasisha wajibu wa mtumishi na kama akaunti hii inaweza kuingia.' : 'Update the staff role and whether this account can sign in.'}</p>
               </div>
               <button onClick={closeEditModal} className="rounded-full p-2 text-brand-400 hover:bg-brand-100 hover:text-brand-700 dark:hover:bg-brand-800 dark:hover:text-white">
                 <XMarkIcon className="h-5 w-5" />
@@ -352,7 +369,7 @@ export default function UsersPage() {
 
             <form onSubmit={handleUpdateUser} className="space-y-5">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Full Name</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Jina Kamili' : 'Full Name'}</label>
                 <input
                   value={editFormData.full_name}
                   onChange={(e) => setEditFormData((current) => ({ ...current, full_name: e.target.value }))}
@@ -362,7 +379,7 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Phone Number</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Namba ya Simu' : 'Phone Number'}</label>
                 <input
                   value={editFormData.phone}
                   onChange={(e) => setEditFormData((current) => ({ ...current, phone: e.target.value }))}
@@ -371,7 +388,7 @@ export default function UsersPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Role</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Wajibu' : 'Role'}</label>
                 <select
                   value={editFormData.role_id}
                   onChange={(e) => setEditFormData((current) => ({ ...current, role_id: e.target.value }))}
@@ -393,8 +410,8 @@ export default function UsersPage() {
                   className="mt-1 h-4 w-4 rounded border-brand-300 text-primary focus:ring-primary"
                 />
                 <span>
-                  <span className="block font-semibold text-brand-900 dark:text-white">Allow sign in</span>
-                  <span className="block text-brand-500">Turn this off to disable the account without deleting the staff member.</span>
+                  <span className="block font-semibold text-brand-900 dark:text-white">{isSw ? 'Ruhusu kuingia' : 'Allow sign in'}</span>
+                  <span className="block text-brand-500">{isSw ? 'Zima hii ili kuzima akaunti bila kumfuta mtumishi.' : 'Turn this off to disable the account without deleting the staff member.'}</span>
                 </span>
               </label>
 
@@ -404,14 +421,14 @@ export default function UsersPage() {
                   onClick={closeEditModal}
                   className="rounded-xl px-5 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-100 dark:text-brand-300 dark:hover:bg-brand-800"
                 >
-                  Cancel
+                  {isSw ? 'Ghairi' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
                   className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {submitting ? 'Saving...' : 'Save Changes'}
+                  {submitting ? (isSw ? 'Inahifadhi...' : 'Saving...') : (isSw ? 'Hifadhi Mabadiliko' : 'Save Changes')}
                 </button>
               </div>
             </form>

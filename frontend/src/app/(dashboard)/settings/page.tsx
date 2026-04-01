@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/context/LanguageContext';
 
 const SMS_PHONE_REGEX = /^\+\d{10,}$/;
 
@@ -24,6 +25,8 @@ type OrganizationSettings = {
 };
 
 export default function SettingsPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const { user, setUser } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [settings, setSettings] = useState<OrganizationSettings>({
@@ -97,9 +100,9 @@ export default function SettingsPage() {
     try {
       await api.put('/settings', settings);
       invalidateGetCache('/settings');
-      toast.success('Organization settings updated successfully');
+      toast.success(isSw ? 'Mipangilio ya shirika imesasishwa.' : 'Organization settings updated successfully');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to update organization settings'));
+      toast.error(getApiErrorMessage(err, isSw ? 'Imeshindikana kusasisha mipangilio ya shirika' : 'Failed to update organization settings'));
     } finally {
       setSavingSettings(false);
     }
@@ -107,12 +110,12 @@ export default function SettingsPage() {
 
   const handleSaveProfile = async () => {
     if (!profile.full_name.trim()) {
-      toast.error('Full name is required');
+      toast.error(isSw ? 'Jina kamili linahitajika' : 'Full name is required');
       return;
     }
     const trimmedPhone = profile.phone.trim();
     if (trimmedPhone && !SMS_PHONE_REGEX.test(trimmedPhone)) {
-      toast.error('SMS alert phone must start with + and include at least 10 digits');
+      toast.error(isSw ? 'Namba ya SMS lazima ianze na + na iwe na angalau tarakimu 10' : 'SMS alert phone must start with + and include at least 10 digits');
       return;
     }
 
@@ -123,9 +126,9 @@ export default function SettingsPage() {
         phone: trimmedPhone,
       });
       setUser(data.user);
-      toast.success('Profile updated successfully');
+      toast.success(isSw ? 'Wasifu umesasishwa.' : 'Profile updated successfully');
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to update profile'));
+      toast.error(getApiErrorMessage(err, isSw ? 'Imeshindikana kusasisha wasifu' : 'Failed to update profile'));
     } finally {
       setSavingProfile(false);
     }
@@ -133,17 +136,17 @@ export default function SettingsPage() {
 
   const handleChangePassword = async () => {
     if (!passwordForm.current_password || !passwordForm.new_password || !passwordForm.confirm_password) {
-      toast.error('All password fields are required');
+      toast.error(isSw ? 'Sehemu zote za nenosiri zinahitajika' : 'All password fields are required');
       return;
     }
 
     if (passwordForm.new_password.length < 8) {
-      toast.error('New password must be at least 8 characters long');
+      toast.error(isSw ? 'Nenosiri jipya lazima liwe na herufi 8 au zaidi' : 'New password must be at least 8 characters long');
       return;
     }
 
     if (passwordForm.new_password !== passwordForm.confirm_password) {
-      toast.error('New password and confirmation do not match');
+      toast.error(isSw ? 'Nenosiri jipya na uthibitisho havilingani' : 'New password and confirmation do not match');
       return;
     }
 
@@ -158,9 +161,9 @@ export default function SettingsPage() {
         new_password: '',
         confirm_password: '',
       });
-      toast.success(data.message || 'Password changed successfully');
+      toast.success(data.message || (isSw ? 'Nenosiri limebadilishwa.' : 'Password changed successfully'));
     } catch (err) {
-      toast.error(getApiErrorMessage(err, 'Failed to change password'));
+      toast.error(getApiErrorMessage(err, isSw ? 'Imeshindikana kubadilisha nenosiri' : 'Failed to change password'));
     } finally {
       setChangingPassword(false);
     }
@@ -177,8 +180,10 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8 animate-fade-in">
       <div>
-        <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Settings & Account</h2>
-        <p className="text-brand-500">Manage your profile, password, and organization preferences.</p>
+        <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Mipangilio na Akaunti' : 'Settings & Account'}</h2>
+        <p className="text-brand-500">
+          {isSw ? 'Simamia wasifu, nenosiri, na mapendeleo ya shirika.' : 'Manage your profile, password, and organization preferences.'}
+        </p>
       </div>
 
       <div className="grid gap-8 xl:grid-cols-[1fr_1fr]">
@@ -188,14 +193,14 @@ export default function SettingsPage() {
               <UserCircleIcon className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-brand-900 dark:text-white">My Profile</h3>
-              <p className="text-sm text-brand-500">Update the account details shown across the system.</p>
+              <h3 className="text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Wasifu Wangu' : 'My Profile'}</h3>
+              <p className="text-sm text-brand-500">{isSw ? 'Sasisha taarifa za akaunti zinazoonekana kwenye mfumo.' : 'Update the account details shown across the system.'}</p>
             </div>
           </div>
 
           <div className="space-y-5">
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Full Name</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Jina Kamili' : 'Full Name'}</label>
               <input
                 name="full_name"
                 value={profile.full_name}
@@ -214,7 +219,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">SMS alert phone number</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Namba ya simu ya arifa za SMS' : 'SMS alert phone number'}</label>
                 <input
                   name="phone"
                   type="tel"
@@ -224,14 +229,14 @@ export default function SettingsPage() {
                   className="w-full rounded-lg border border-brand-200 bg-white/50 px-4 py-2 text-sm font-medium transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-brand-700 dark:bg-brand-900/50"
                 />
                 <p className="text-xs text-brand-500">
-                  Receive SMS alerts on this number.
+                  {isSw ? 'Pokea arifa za SMS kwenye namba hii.' : 'Receive SMS alerts on this number.'}
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Role</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Wajibu' : 'Role'}</label>
                 <input
                   value={profile.role}
                   readOnly
@@ -239,7 +244,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Organization</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Shirika' : 'Organization'}</label>
                 <input
                   value={profile.organization_name}
                   readOnly
@@ -260,7 +265,7 @@ export default function SettingsPage() {
               ) : (
                 <CheckIcon className="h-5 w-5" />
               )}
-              Save Profile
+              {isSw ? 'Hifadhi Wasifu' : 'Save Profile'}
             </button>
           </div>
         </div>
@@ -271,14 +276,14 @@ export default function SettingsPage() {
               <KeyIcon className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-brand-900 dark:text-white">Change Password</h3>
-              <p className="text-sm text-brand-500">Use a strong password and keep it private.</p>
+              <h3 className="text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Badilisha Nenosiri' : 'Change Password'}</h3>
+              <p className="text-sm text-brand-500">{isSw ? 'Tumia nenosiri imara na uliweke kwa faragha.' : 'Use a strong password and keep it private.'}</p>
             </div>
           </div>
 
           <div className="space-y-5">
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Current Password</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Nenosiri la Sasa' : 'Current Password'}</label>
               <input
                 type="password"
                 name="current_password"
@@ -288,7 +293,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">New Password</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Nenosiri Jipya' : 'New Password'}</label>
               <input
                 type="password"
                 name="new_password"
@@ -298,7 +303,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Confirm New Password</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Thibitisha Nenosiri Jipya' : 'Confirm New Password'}</label>
               <input
                 type="password"
                 name="confirm_password"
@@ -320,7 +325,7 @@ export default function SettingsPage() {
               ) : (
                 <KeyIcon className="h-5 w-5" />
               )}
-              Update Password
+              {isSw ? 'Sasisha Nenosiri' : 'Update Password'}
             </button>
           </div>
         </div>
@@ -333,14 +338,14 @@ export default function SettingsPage() {
               <Cog6ToothIcon className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-brand-900 dark:text-white">Organization Settings</h3>
-              <p className="text-sm text-brand-500">Only the landlord owner can change these organization preferences.</p>
+              <h3 className="text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Mipangilio ya Shirika' : 'Organization Settings'}</h3>
+              <p className="text-sm text-brand-500">{isSw ? 'Mmiliki wa landlord pekee ndiye anaweza kubadilisha mapendeleo haya.' : 'Only the landlord owner can change these organization preferences.'}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Business/Landlord Name</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Jina la Biashara/Mmiliki' : 'Business/Landlord Name'}</label>
               <input
                 name="business_name"
                 value={settings.business_name || ''}
@@ -349,7 +354,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Contact Phone</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Simu ya Mawasiliano' : 'Contact Phone'}</label>
               <input
                 name="business_phone"
                 value={settings.business_phone || ''}
@@ -358,7 +363,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Contact Email</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Barua Pepe ya Mawasiliano' : 'Contact Email'}</label>
               <input
                 name="business_email"
                 value={settings.business_email || ''}
@@ -367,17 +372,17 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Currency Code</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Msimbo wa Sarafu' : 'Currency Code'}</label>
               <input
                 name="currency"
                 value={settings.currency || ''}
                 onChange={handleSettingsChange}
-                placeholder="e.g. USD, KES, TZS"
+                placeholder={isSw ? 'mf. USD, KES, TZS' : 'e.g. USD, KES, TZS'}
                 className="w-full rounded-lg border border-brand-200 bg-white/50 px-4 py-2 text-sm font-medium uppercase transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-brand-700 dark:bg-brand-900/50"
               />
             </div>
             <div className="col-span-full space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Business Address</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Anwani ya Biashara' : 'Business Address'}</label>
               <textarea
                 name="business_address"
                 value={settings.business_address || ''}
@@ -392,12 +397,12 @@ export default function SettingsPage() {
             <div className="rounded-xl bg-brand-100 p-2.5 dark:bg-brand-800">
               <Cog6ToothIcon className="h-6 w-6 text-primary" />
             </div>
-            <h3 className="text-lg font-bold text-brand-900 dark:text-white">Lease & Payment Preferences</h3>
+            <h3 className="text-lg font-bold text-brand-900 dark:text-white">{isSw ? 'Mapendeleo ya Mkataba na Malipo' : 'Lease & Payment Preferences'}</h3>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Rent Reminder (Days Before)</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Kumbusho la Kodi (Siku Kabla)' : 'Rent Reminder (Days Before)'}</label>
               <input
                 type="number"
                 name="reminder_days"
@@ -407,7 +412,7 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Late Fee Percentage (%)</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Asilimia ya Faini ya Kuchelewa (%)' : 'Late Fee Percentage (%)'}</label>
               <input
                 type="number"
                 name="late_fee_percentage"
@@ -417,13 +422,13 @@ export default function SettingsPage() {
               />
             </div>
             <div className="col-span-full space-y-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Receipt Footer Message</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Ujumbe wa Chini ya Risiti' : 'Receipt Footer Message'}</label>
               <textarea
                 name="receipt_footer"
                 value={settings.receipt_footer || ''}
                 onChange={handleSettingsChange}
                 rows={2}
-                placeholder="e.g. Thank you for your payment."
+                placeholder={isSw ? 'mf. Asante kwa malipo yako.' : 'e.g. Thank you for your payment.'}
                 className="w-full resize-none rounded-lg border border-brand-200 bg-white/50 px-4 py-2 text-sm font-medium transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-brand-700 dark:bg-brand-900/50"
               />
             </div>
@@ -440,13 +445,15 @@ export default function SettingsPage() {
               ) : (
                 <CheckIcon className="h-5 w-5" />
               )}
-              Save Organization Settings
+              {isSw ? 'Hifadhi Mipangilio ya Shirika' : 'Save Organization Settings'}
             </button>
           </div>
         </div>
       ) : (
         <div className="rounded-2xl border border-brand-200 bg-white/70 px-5 py-4 text-sm text-brand-600 shadow-sm dark:border-brand-800 dark:bg-brand-900/60 dark:text-brand-300">
-          Organization settings are managed by the landlord owner. Your profile and password controls are available above.
+          {isSw
+            ? 'Mipangilio ya shirika inasimamiwa na mmiliki wa landlord. Udhibiti wa wasifu na nenosiri unapatikana hapo juu.'
+            : 'Organization settings are managed by the landlord owner. Your profile and password controls are available above.'}
         </div>
       )}
     </div>

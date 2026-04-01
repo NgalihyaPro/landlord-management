@@ -10,11 +10,14 @@ import whatsappImage from '@/assets/login/whatsapp.png';
 import emailImage from '@/assets/login/email.png';
 import houseImage from '@/assets/login/house-picture.jpg';
 import './page.css';
+import { useLanguage } from '@/context/LanguageContext';
 
 const isProduction = import.meta.env.PROD;
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { t } = useLanguage();
+  const tx = t('auth.login');
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,7 +41,7 @@ export default function LoginPage() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail || !password) {
-      setErrorMessage('Email and password are required.');
+      setErrorMessage(tx.error_required);
       return;
     }
 
@@ -50,10 +53,10 @@ export default function LoginPage() {
         email: normalizedEmail,
         password,
       });
-      toast.success(`Welcome back, ${data.user.full_name}!`);
+      toast.success(`${tx.welcome_back} ${data.user.full_name}!`);
       login(data.user);
     } catch (err: any) {
-      const message = getApiErrorMessage(err, 'Invalid credentials');
+      const message = getApiErrorMessage(err, tx.error_invalid);
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -68,10 +71,10 @@ export default function LoginPage() {
           <div className="lp-form-container">
             <div className="lp-hero-header">
               <h1>
-                Welcome <span className="lp-hero-accent">back!</span>
+                {tx.title.split(' ')[0]} <span className="lp-hero-accent">{tx.title.split(' ').slice(1).join(' ')}</span>
               </h1>
               <p className="lp-subtitle">
-                The intelligent, modern property management system designed exclusively for proactive <strong>landlords</strong>.
+                {tx.subtitle}
               </p>
             </div>
 
@@ -87,7 +90,7 @@ export default function LoginPage() {
                     setEmail(e.target.value);
                     clearErrors();
                   }}
-                  placeholder="Email address"
+                  placeholder={tx.email_placeholder}
                 />
               </div>
 
@@ -104,30 +107,30 @@ export default function LoginPage() {
                   }}
                   onKeyUp={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
                   onKeyDown={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
-                  placeholder="Password"
+                  placeholder={tx.password_placeholder}
                 />
                 <button
                   type="button"
                   className="lp-password-toggle"
                   onClick={() => setShowPassword((current) => !current)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? tx.hide_password : tx.show_password}
                 >
                   {showPassword ? <EyeSlashIcon className="lp-password-toggle-icon" /> : <EyeIcon className="lp-password-toggle-icon" />}
                 </button>
               </div>
 
-              {capsLockOn && <p className="lp-caps-lock">Caps Lock is on.</p>}
+              {capsLockOn && <p className="lp-caps-lock">{tx.caps_lock}</p>}
 
               <div className="lp-forgot-password">
                 <button type="button" onClick={handleForgotPassword}>
-                  Forgot Password?
+                  {tx.forgot_password}
                 </button>
               </div>
 
               {errorMessage && <div className="lp-error-message">{errorMessage}</div>}
 
               <button type="submit" className="lp-btn-login" disabled={loading}>
-                {loading ? 'Signing in...' : 'Login'}
+                {loading ? tx.signing_in : tx.login_button}
               </button>
             </form>
 
@@ -141,7 +144,7 @@ export default function LoginPage() {
                     setErrorMessage('');
                   }}
                 >
-                  Auto-fill Manager
+                  {tx.dev_autofill}
                 </button>
               </div>
             )}
@@ -152,8 +155,8 @@ export default function LoginPage() {
                   <img src={profileAccountImage} alt="Account" className="lp-support-avatar-img" />
                 </div>
                 <div className="lp-support-text">
-                  <strong>Having trouble logging in?</strong>
-                  <p>For password reset, account support, or access issues, please contact the System Administrator.</p>
+                  <strong>{tx.support_login_title}</strong>
+                  <p>{tx.support_login_text}</p>
                 </div>
               </div>
 
@@ -164,8 +167,8 @@ export default function LoginPage() {
                   <img src={manImage} alt="User" className="lp-support-avatar-img" />
                 </div>
                 <div className="lp-support-text">
-                  <strong>Need an account?</strong>
-                  <p>New user registration is handled by the System Administrator. Please contact the administrator to create your account.</p>
+                  <strong>{tx.support_account_title}</strong>
+                  <p>{tx.support_account_text}</p>
                 </div>
               </div>
 
@@ -189,7 +192,7 @@ export default function LoginPage() {
               <img src={houseImage} alt="Property" className="lp-panel-badge-img" />
               <div className="lp-panel-badge-text">
                 <span className="lp-panel-badge-name">LandlordPro</span>
-                <span className="lp-panel-badge-sub">Property Management</span>
+                <span className="lp-panel-badge-sub">{tx.panel_subtitle}</span>
               </div>
             </div>
 
@@ -203,10 +206,10 @@ export default function LoginPage() {
               </div>
 
               <div className="lp-floating-card">
-                <div className="lp-fc-title">Rent Collection</div>
-                <div className="lp-fc-subtitle">14 Properties</div>
+                <div className="lp-fc-title">{tx.panel_card_title}</div>
+                <div className="lp-fc-subtitle">{tx.panel_card_subtitle}</div>
                 <div className="lp-fc-bottom">
-                  <span className="lp-fc-tag">Payments</span>
+                  <span className="lp-fc-tag">{tx.panel_card_tag}</span>
                   <span className="lp-fc-circle">92%</span>
                 </div>
               </div>
@@ -226,9 +229,7 @@ export default function LoginPage() {
                 <span className="lp-dot lp-dot-active" />
                 <span className="lp-dot" />
               </div>
-              <h2 className="lp-green-panel-text">
-                Manage your properties effortlessly with <strong>LandlordPro</strong>
-              </h2>
+              <h2 className="lp-green-panel-text">{tx.panel_bottom_text}</h2>
             </div>
           </div>
         </div>

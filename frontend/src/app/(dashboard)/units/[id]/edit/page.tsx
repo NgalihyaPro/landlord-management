@@ -3,6 +3,7 @@ import api, { getApiErrorMessage, invalidateGetCache } from '@/lib/api';
 import { ArrowLeftIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 
 type UnitFormState = {
   unit_number: string;
@@ -29,6 +30,8 @@ const UNIT_TYPES = [
 ];
 
 export default function UnitEditPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -57,7 +60,7 @@ export default function UnitEditPage() {
           description: data.description || '',
         });
       } catch (error) {
-        toast.error(getApiErrorMessage(error, 'Failed to load unit.'));
+        toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kupakia chumba.' : 'Failed to load unit.'));
       } finally {
         setLoading(false);
       }
@@ -87,10 +90,10 @@ export default function UnitEditPage() {
       invalidateGetCache('/properties');
       invalidateGetCache('/dashboard');
       invalidateGetCache('/notifications');
-      toast.success('Unit updated successfully.');
+      toast.success(isSw ? 'Chumba kimesasishwa.' : 'Unit updated successfully.');
       navigate('/units');
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to update unit.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kusasisha chumba.' : 'Failed to update unit.'));
     } finally {
       setSaving(false);
     }
@@ -111,8 +114,8 @@ export default function UnitEditPage() {
           <ArrowLeftIcon className="h-5 w-5 text-brand-600 dark:text-brand-300" />
         </Link>
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Edit Unit</h2>
-          <p className="text-brand-500">Update unit details and availability</p>
+          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Hariri Chumba' : 'Edit Unit'}</h2>
+          <p className="text-brand-500">{isSw ? 'Sasisha taarifa za chumba na upatikanaji wake' : 'Update unit details and availability'}</p>
         </div>
       </div>
 
@@ -120,7 +123,7 @@ export default function UnitEditPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Unit Number *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Namba ya Chumba *' : 'Unit Number *'}</label>
               <input
                 required
                 name="unit_number"
@@ -130,7 +133,7 @@ export default function UnitEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Floor Number *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Namba ya Ghorofa *' : 'Floor Number *'}</label>
               <input
                 required
                 type="number"
@@ -141,7 +144,7 @@ export default function UnitEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Unit Type *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Aina ya Chumba *' : 'Unit Type *'}</label>
               <select
                 required
                 name="unit_type"
@@ -151,13 +154,27 @@ export default function UnitEditPage() {
               >
                 {UNIT_TYPES.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {isSw
+                      ? ({
+                        room: 'chumba',
+                        apartment: 'apartment',
+                        studio: 'studio',
+                        shop: 'duka',
+                        office: 'ofisi',
+                        other: 'nyingine',
+                        commercial: 'biashara',
+                        single_room: 'chumba kimoja',
+                        '1BHK': '1BHK',
+                        '2BHK': '2BHK',
+                        '3BHK': '3BHK',
+                      } as Record<string, string>)[type] || type
+                      : type}
                   </option>
                 ))}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Monthly Rent *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Kodi ya Mwezi *' : 'Monthly Rent *'}</label>
               <input
                 required
                 type="number"
@@ -169,7 +186,7 @@ export default function UnitEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Deposit Amount</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Kiasi cha Dhamana' : 'Deposit Amount'}</label>
               <input
                 type="number"
                 step="0.01"
@@ -180,7 +197,7 @@ export default function UnitEditPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-brand-500 uppercase">Status *</label>
+              <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Hali *' : 'Status *'}</label>
               <select
                 required
                 name="status"
@@ -188,15 +205,15 @@ export default function UnitEditPage() {
                 onChange={handleChange}
                 className="w-full px-4 py-2 bg-white/50 dark:bg-brand-900/50 border border-brand-200 dark:border-brand-700 rounded-lg focus:outline-none focus:border-primary focus:ring-1 text-sm font-medium"
               >
-                <option value="vacant">vacant</option>
-                <option value="occupied">occupied</option>
-                <option value="maintenance">maintenance</option>
+                <option value="vacant">{isSw ? 'wazi' : 'vacant'}</option>
+                <option value="occupied">{isSw ? 'imekaliwa' : 'occupied'}</option>
+                <option value="maintenance">{isSw ? 'matengenezo' : 'maintenance'}</option>
               </select>
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-brand-500 uppercase">Description</label>
+            <label className="text-xs font-semibold text-brand-500 uppercase">{isSw ? 'Maelezo' : 'Description'}</label>
             <textarea
               name="description"
               rows={4}
@@ -212,7 +229,7 @@ export default function UnitEditPage() {
               onClick={() => navigate(-1)}
               className="px-6 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-100 rounded-lg mr-3 transition-colors dark:text-brand-300 dark:hover:bg-brand-800"
             >
-              Cancel
+              {isSw ? 'Ghairi' : 'Cancel'}
             </button>
             <button
               type="submit"
@@ -224,7 +241,7 @@ export default function UnitEditPage() {
               ) : (
                 <PencilSquareIcon className="h-5 w-5" />
               )}
-              Save Changes
+              {isSw ? 'Hifadhi Mabadiliko' : 'Save Changes'}
             </button>
           </div>
         </form>

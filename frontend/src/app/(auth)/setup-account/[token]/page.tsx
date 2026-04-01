@@ -11,6 +11,7 @@ import {
   UserIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/context/LanguageContext';
 
 type InvitationDetails = {
   full_name: string;
@@ -22,6 +23,8 @@ type InvitationDetails = {
 };
 
 export default function SetupAccountPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const { token } = useParams();
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -49,14 +52,14 @@ export default function SetupAccountPage() {
           phone: data.phone || '',
         }));
       } catch (err: any) {
-        setErrorMessage(getApiErrorMessage(err, 'Invitation link is invalid or expired.'));
+        setErrorMessage(getApiErrorMessage(err, isSw ? 'Kiungo cha mualiko si sahihi au muda wake umeisha.' : 'Invitation link is invalid or expired.'));
       } finally {
         setLoading(false);
       }
     };
 
     if (!token) {
-      setErrorMessage('Invitation link is invalid.');
+      setErrorMessage(isSw ? 'Kiungo cha mualiko si sahihi.' : 'Invitation link is invalid.');
       setLoading(false);
       return;
     }
@@ -69,12 +72,12 @@ export default function SetupAccountPage() {
     if (!token) return;
 
     if (formData.password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters long.');
+      setErrorMessage(isSw ? 'Nenosiri lazima liwe na herufi 8 au zaidi.' : 'Password must be at least 8 characters long.');
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+      setErrorMessage(isSw ? 'Manenosiri hayalingani.' : 'Passwords do not match.');
       return;
     }
 
@@ -89,11 +92,11 @@ export default function SetupAccountPage() {
         password: formData.password,
       });
 
-      toast.success('Account setup completed. Welcome aboard!');
+      toast.success(isSw ? 'Usanidi wa akaunti umekamilika. Karibu!' : 'Account setup completed. Welcome aboard!');
       login(data.user);
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
-      const message = getApiErrorMessage(err, 'Failed to complete account setup.');
+      const message = getApiErrorMessage(err, isSw ? 'Imeshindikana kukamilisha usanidi wa akaunti.' : 'Failed to complete account setup.');
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -116,7 +119,7 @@ export default function SetupAccountPage() {
           <BuildingOfficeIcon className="h-10 w-10" />
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-500 dark:text-brand-400">LandlordPro</p>
-            <h1 className="text-3xl font-extrabold tracking-tight">Set Up Your Account</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">{isSw ? 'Kamilisha Akaunti Yako' : 'Set Up Your Account'}</h1>
           </div>
         </div>
 
@@ -125,7 +128,7 @@ export default function SetupAccountPage() {
             <>
               <div className="mb-6 rounded-2xl bg-primary/5 p-4">
                 <p className="text-sm text-brand-600 dark:text-brand-300">
-                  You were invited to join <span className="font-semibold text-primary">{invitation.organization_name}</span> as a{' '}
+                  {isSw ? 'Umealikwa kujiunga na' : 'You were invited to join'} <span className="font-semibold text-primary">{invitation.organization_name}</span> {isSw ? 'kama' : 'as a'}{' '}
                   <span className="font-semibold capitalize text-primary">{invitation.role}</span>.
                 </p>
                 <p className="mt-2 text-sm text-brand-500 dark:text-brand-400">{invitation.email}</p>
@@ -134,7 +137,7 @@ export default function SetupAccountPage() {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="setup-full-name" className="text-xs font-semibold uppercase tracking-wide text-brand-500">
-                    Full Name
+                    {isSw ? 'Jina Kamili' : 'Full Name'}
                   </label>
                   <div className="relative mt-1">
                     <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
@@ -150,7 +153,7 @@ export default function SetupAccountPage() {
 
                 <div>
                   <label htmlFor="setup-phone" className="text-xs font-semibold uppercase tracking-wide text-brand-500">
-                    Phone Number
+                    {isSw ? 'Namba ya Simu' : 'Phone Number'}
                   </label>
                   <div className="relative mt-1">
                     <PhoneIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
@@ -159,14 +162,14 @@ export default function SetupAccountPage() {
                       value={formData.phone}
                       onChange={(e) => setFormData((current) => ({ ...current, phone: e.target.value }))}
                       className="w-full rounded-xl border border-brand-200 bg-white py-2.5 pl-10 pr-3 text-sm text-brand-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-brand-700 dark:bg-brand-950 dark:text-white"
-                      placeholder="+255..."
+                      placeholder={isSw ? '+255...' : '+255...'}
                     />
                   </div>
                 </div>
 
                 <div>
                   <label htmlFor="setup-password" className="text-xs font-semibold uppercase tracking-wide text-brand-500">
-                    Create Password
+                    {isSw ? 'Tengeneza Nenosiri' : 'Create Password'}
                   </label>
                   <div className="relative mt-1">
                     <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
@@ -190,7 +193,7 @@ export default function SetupAccountPage() {
 
                 <div>
                   <label htmlFor="setup-confirm-password" className="text-xs font-semibold uppercase tracking-wide text-brand-500">
-                    Confirm Password
+                    {isSw ? 'Thibitisha Nenosiri' : 'Confirm Password'}
                   </label>
                   <div className="relative mt-1">
                     <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
@@ -223,7 +226,7 @@ export default function SetupAccountPage() {
                   disabled={submitting}
                   className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {submitting ? 'Setting up account...' : 'Complete Account Setup'}
+                  {submitting ? (isSw ? 'Inakamilisha akaunti...' : 'Setting up account...') : (isSw ? 'Kamilisha Usanidi wa Akaunti' : 'Complete Account Setup')}
                 </button>
               </form>
             </>

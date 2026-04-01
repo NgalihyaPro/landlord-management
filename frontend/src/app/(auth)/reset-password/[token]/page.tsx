@@ -9,6 +9,7 @@ import {
   ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
 import api, { getApiErrorMessage } from '@/lib/api';
+import { useLanguage } from '@/context/LanguageContext';
 
 type ResetPasswordDetails = {
   email: string;
@@ -18,6 +19,8 @@ type ResetPasswordDetails = {
 };
 
 export default function ResetPasswordPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const { token } = useParams();
   const navigate = useNavigate();
   const [details, setDetails] = useState<ResetPasswordDetails | null>(null);
@@ -32,7 +35,7 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     const loadResetDetails = async () => {
       if (!token) {
-        setErrorMessage('Password reset link is invalid.');
+        setErrorMessage(isSw ? 'Kiungo cha kuweka upya nenosiri si sahihi.' : 'Password reset link is invalid.');
         setLoading(false);
         return;
       }
@@ -41,7 +44,7 @@ export default function ResetPasswordPage() {
         const { data } = await api.get<ResetPasswordDetails>(`/auth/reset-password/${token}`);
         setDetails(data);
       } catch (error) {
-        setErrorMessage(getApiErrorMessage(error, 'Password reset link is invalid or expired.'));
+        setErrorMessage(getApiErrorMessage(error, isSw ? 'Kiungo cha kuweka upya nenosiri si sahihi au muda wake umeisha.' : 'Password reset link is invalid or expired.'));
       } finally {
         setLoading(false);
       }
@@ -54,17 +57,17 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     if (!token) {
-      setErrorMessage('Password reset link is invalid.');
+      setErrorMessage(isSw ? 'Kiungo cha kuweka upya nenosiri si sahihi.' : 'Password reset link is invalid.');
       return;
     }
 
     if (password.length < 8) {
-      setErrorMessage('Password must be at least 8 characters long.');
+      setErrorMessage(isSw ? 'Nenosiri lazima liwe na herufi 8 au zaidi.' : 'Password must be at least 8 characters long.');
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
+      setErrorMessage(isSw ? 'Manenosiri hayalingani.' : 'Passwords do not match.');
       return;
     }
 
@@ -76,10 +79,10 @@ export default function ResetPasswordPage() {
         token,
         password,
       });
-      toast.success(data.message || 'Password reset successfully.');
+      toast.success(data.message || (isSw ? 'Nenosiri limewekwa upya kwa mafanikio.' : 'Password reset successfully.'));
       navigate('/login', { replace: true });
     } catch (error) {
-      const message = getApiErrorMessage(error, 'Failed to reset password.');
+      const message = getApiErrorMessage(error, isSw ? 'Imeshindikana kuweka upya nenosiri.' : 'Failed to reset password.');
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -102,7 +105,7 @@ export default function ResetPasswordPage() {
           <BuildingOfficeIcon className="h-10 w-10" />
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brand-500 dark:text-brand-400">LandlordPro</p>
-            <h1 className="text-3xl font-extrabold tracking-tight">Choose a New Password</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">{isSw ? 'Chagua Nenosiri Jipya' : 'Choose a New Password'}</h1>
           </div>
         </div>
 
@@ -111,15 +114,15 @@ export default function ResetPasswordPage() {
             <>
               <div className="mb-6 rounded-2xl bg-primary/5 p-4 text-sm text-brand-600 dark:text-brand-300">
                 <p>
-                  Resetting password for <span className="font-semibold text-primary">{details.email}</span>
+                  {isSw ? 'Unaweka upya nenosiri kwa' : 'Resetting password for'} <span className="font-semibold text-primary">{details.email}</span>
                 </p>
-                <p className="mt-1">Organization: {details.organization_name}</p>
+                <p className="mt-1">{isSw ? 'Shirika' : 'Organization'}: {details.organization_name}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label htmlFor="reset-password" className="text-xs font-semibold uppercase tracking-wide text-brand-500">
-                    New Password
+                    {isSw ? 'Nenosiri Jipya' : 'New Password'}
                   </label>
                   <div className="relative mt-1">
                     <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
@@ -143,7 +146,7 @@ export default function ResetPasswordPage() {
 
                 <div>
                   <label htmlFor="reset-confirm-password" className="text-xs font-semibold uppercase tracking-wide text-brand-500">
-                    Confirm New Password
+                    {isSw ? 'Thibitisha Nenosiri Jipya' : 'Confirm New Password'}
                   </label>
                   <div className="relative mt-1">
                     <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-400" />
@@ -176,7 +179,7 @@ export default function ResetPasswordPage() {
                   disabled={submitting}
                   className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {submitting ? 'Resetting password...' : 'Reset Password'}
+                  {submitting ? (isSw ? 'Inaweka upya nenosiri...' : 'Resetting password...') : (isSw ? 'Weka Upya Nenosiri' : 'Reset Password')}
                 </button>
               </form>
             </>
@@ -189,7 +192,7 @@ export default function ResetPasswordPage() {
           <div className="mt-6 border-t border-brand-100 pt-6 dark:border-brand-800">
             <Link to="/login" className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary/80">
               <ArrowLeftIcon className="h-4 w-4" />
-              Back to sign in
+              {isSw ? 'Rudi kuingia' : 'Back to sign in'}
             </Link>
           </div>
         </div>

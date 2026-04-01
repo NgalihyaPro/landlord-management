@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
+import { useLanguage } from '@/context/LanguageContext';
 
 type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'all';
 
@@ -35,35 +36,37 @@ type Registration = {
 
 const STATUS_OPTIONS: ApprovalStatus[] = ['pending', 'approved', 'rejected', 'all'];
 
-const getStatusBadge = (registration: Registration) => {
+const getStatusBadge = (registration: Registration, isSw: boolean) => {
   if (registration.approval_status === 'approved' && !registration.is_active) {
     return {
-      label: 'restricted',
+      label: isSw ? 'imezuiwa' : 'restricted',
       className: 'bg-danger/10 text-danger',
     };
   }
 
   if (registration.approval_status === 'approved') {
     return {
-      label: 'approved',
+      label: isSw ? 'imekubaliwa' : 'approved',
       className: 'bg-success/10 text-success',
     };
   }
 
   if (registration.approval_status === 'rejected') {
     return {
-      label: 'rejected',
+      label: isSw ? 'imekataliwa' : 'rejected',
       className: 'bg-danger/10 text-danger',
     };
   }
 
   return {
-    label: 'pending',
+    label: isSw ? 'inasubiri' : 'pending',
     className: 'bg-warning/10 text-warning',
   };
 };
 
 export default function ApprovalsPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const [status, setStatus] = useState<ApprovalStatus>('pending');
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +90,7 @@ export default function ApprovalsPage() {
       const data = await cachedGet<Registration[]>(endpoint, { force });
       setRegistrations(data);
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to load landlord registrations.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kupakia usajili wa landlord.' : 'Failed to load landlord registrations.'));
     } finally {
       setLoading(false);
     }
@@ -121,8 +124,8 @@ export default function ApprovalsPage() {
   const handleDecision = async (registration: Registration, action: 'approve' | 'reject') => {
     const notes = window.prompt(
       action === 'approve'
-        ? 'Optional approval note'
-        : 'Optional rejection reason'
+        ? (isSw ? 'Maelezo ya kukubali (hiari)' : 'Optional approval note')
+        : (isSw ? 'Sababu ya kukataa (hiari)' : 'Optional rejection reason')
     ) || '';
 
     setActiveId(registration.id);
@@ -132,8 +135,8 @@ export default function ApprovalsPage() {
       });
       toast.success(
         action === 'approve'
-          ? `${registration.name} has been approved.`
-          : `${registration.name} has been rejected.`
+          ? (isSw ? `${registration.name} imekubaliwa.` : `${registration.name} has been approved.`)
+          : (isSw ? `${registration.name} imekataliwa.` : `${registration.name} has been rejected.`)
       );
       await refreshAfterAction();
     } catch (error) {
@@ -141,8 +144,8 @@ export default function ApprovalsPage() {
         getApiErrorMessage(
           error,
           action === 'approve'
-            ? 'Failed to approve registration.'
-            : 'Failed to reject registration.'
+            ? (isSw ? 'Imeshindikana kukubali usajili.' : 'Failed to approve registration.')
+            : (isSw ? 'Imeshindikana kukataa usajili.' : 'Failed to reject registration.')
         )
       );
     } finally {
@@ -151,11 +154,17 @@ export default function ApprovalsPage() {
   };
 
   const handleAccessAction = async (registration: Registration, action: 'restrict' | 'restore') => {
-    const actionLabel = action === 'restrict' ? 'restrict access to' : 'restore access to';
+    const actionLabel = action === 'restrict'
+      ? (isSw ? 'kuzuia ufikiaji wa' : 'restrict access to')
+      : (isSw ? 'kurudisha ufikiaji wa' : 'restore access to');
     const confirmMessage =
       action === 'restrict'
-        ? `Restrict access for ${registration.name}? All users in this landlord account will be blocked from signing in until you restore access.`
-        : `Restore access for ${registration.name}? Approved users in this landlord account will be able to sign in again.`;
+        ? (isSw
+          ? `Unataka kuzuia ufikiaji wa ${registration.name}? Watumiaji wote wa akaunti hii hawataweza kuingia hadi urudishe ufikiaji.`
+          : `Restrict access for ${registration.name}? All users in this landlord account will be blocked from signing in until you restore access.`)
+        : (isSw
+          ? `Unataka kurudisha ufikiaji wa ${registration.name}? Watumiaji waliokubaliwa wataweza kuingia tena.`
+          : `Restore access for ${registration.name}? Approved users in this landlord account will be able to sign in again.`);
 
     if (!window.confirm(confirmMessage)) {
       return;
@@ -163,8 +172,8 @@ export default function ApprovalsPage() {
 
     const notes = window.prompt(
       action === 'restrict'
-        ? 'Optional restriction note'
-        : 'Optional restore note'
+        ? (isSw ? 'Maelezo ya zuio (hiari)' : 'Optional restriction note')
+        : (isSw ? 'Maelezo ya kurejesha (hiari)' : 'Optional restore note')
     ) || '';
 
     setActiveId(registration.id);
@@ -172,7 +181,7 @@ export default function ApprovalsPage() {
       await api.put(`/platform-admin/registrations/${registration.id}/${action}`, {
         notes: notes.trim() || undefined,
       });
-      toast.success(`${registration.name} access updated successfully.`);
+      toast.success(isSw ? `Ufikiaji wa ${registration.name} umesasishwa.` : `${registration.name} access updated successfully.`);
       await refreshAfterAction();
     } catch (error) {
       toast.error(
@@ -188,7 +197,9 @@ export default function ApprovalsPage() {
 
   const handleDelete = async (registration: Registration) => {
     const confirmed = window.confirm(
-      `Delete ${registration.name} permanently? This will remove the landlord account, users, properties, tenants, and payments tied to it. This cannot be undone.`
+      isSw
+        ? `Ufute ${registration.name} kabisa? Hii itaondoa akaunti ya landlord, watumiaji, mali, wapangaji, na malipo yote yanayohusiana. Huwezi kurudisha.`
+        : `Delete ${registration.name} permanently? This will remove the landlord account, users, properties, tenants, and payments tied to it. This cannot be undone.`
     );
 
     if (!confirmed) {
@@ -198,10 +209,10 @@ export default function ApprovalsPage() {
     setActiveId(registration.id);
     try {
       await api.delete(`/platform-admin/registrations/${registration.id}`);
-      toast.success(`${registration.name} was deleted permanently.`);
+      toast.success(isSw ? `${registration.name} imefutwa kabisa.` : `${registration.name} was deleted permanently.`);
       await refreshAfterAction();
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to delete landlord account.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kufuta akaunti ya landlord.' : 'Failed to delete landlord account.'));
     } finally {
       setActiveId(null);
     }
@@ -217,9 +228,13 @@ export default function ApprovalsPage() {
         full_name: inviteForm.full_name.trim(),
       });
       setInviteLink(data.invite_link || '');
-      toast.success(data.invite_link ? 'Landlord registration email sent. Development link is available below.' : 'Landlord registration email sent.');
+      toast.success(
+        data.invite_link
+          ? (isSw ? 'Barua ya usajili wa landlord imetumwa. Kiungo cha development kipo hapa chini.' : 'Landlord registration email sent. Development link is available below.')
+          : (isSw ? 'Barua ya usajili wa landlord imetumwa.' : 'Landlord registration email sent.')
+      );
     } catch (error) {
-      toast.error(getApiErrorMessage(error, 'Failed to create landlord registration link.'));
+      toast.error(getApiErrorMessage(error, isSw ? 'Imeshindikana kuunda kiungo cha usajili wa landlord.' : 'Failed to create landlord registration link.'));
     } finally {
       setInviteSubmitting(false);
     }
@@ -228,9 +243,9 @@ export default function ApprovalsPage() {
   const copyInviteLink = async () => {
     try {
       await navigator.clipboard.writeText(inviteLink);
-      toast.success('Registration link copied.');
+      toast.success(isSw ? 'Kiungo cha usajili kimenakiliwa.' : 'Registration link copied.');
     } catch {
-      toast.error('Failed to copy the registration link.');
+      toast.error(isSw ? 'Imeshindikana kunakili kiungo cha usajili.' : 'Failed to copy the registration link.');
     }
   };
 
@@ -238,8 +253,12 @@ export default function ApprovalsPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">Landlord Approvals</h2>
-          <p className="text-brand-500">Email secure registration invites to landlord owners and review any pending registrations.</p>
+          <h2 className="text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Ukaguzi wa Landlord' : 'Landlord Approvals'}</h2>
+          <p className="text-brand-500">
+            {isSw
+              ? 'Tuma mialiko salama ya usajili kwa wenye landlord na pitia usajili unaosubiri.'
+              : 'Email secure registration invites to landlord owners and review any pending registrations.'}
+          </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
@@ -248,7 +267,7 @@ export default function ApprovalsPage() {
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary/90"
           >
             <PlusIcon className="h-5 w-5" />
-            Create Landlord Invite
+            {isSw ? 'Tengeneza Mualiko wa Landlord' : 'Create Landlord Invite'}
           </button>
           <select
             value={status}
@@ -257,7 +276,11 @@ export default function ApprovalsPage() {
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option} value={option}>
-                {option === 'all' ? 'All registrations' : `${option.charAt(0).toUpperCase()}${option.slice(1)} registrations`}
+                {option === 'all'
+                  ? (isSw ? 'Usajili wote' : 'All registrations')
+                  : (isSw
+                    ? `${option === 'pending' ? 'Usajili unaosubiri' : option === 'approved' ? 'Usajili uliokubaliwa' : 'Usajili uliokataliwa'}`
+                    : `${option.charAt(0).toUpperCase()}${option.slice(1)} registrations`)}
               </option>
             ))}
           </select>
@@ -270,11 +293,11 @@ export default function ApprovalsPage() {
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : registrations.length === 0 ? (
-          <div className="p-10 text-center text-brand-500">No landlord registrations found for this filter.</div>
+          <div className="p-10 text-center text-brand-500">{isSw ? 'Hakuna usajili wa landlord kwa kichujio hiki.' : 'No landlord registrations found for this filter.'}</div>
         ) : (
           <div className="divide-y divide-border/50">
             {registrations.map((registration) => {
-              const badge = getStatusBadge(registration);
+              const badge = getStatusBadge(registration, isSw);
 
               return (
               <div key={registration.id} className="p-6">
@@ -288,28 +311,28 @@ export default function ApprovalsPage() {
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-brand-500">
-                        Submitted {formatDate(registration.created_at)}
+                        {isSw ? 'Imewasilishwa' : 'Submitted'} {formatDate(registration.created_at)}
                       </p>
                     </div>
 
                     <div className="grid gap-3 text-sm text-brand-600 dark:text-brand-300 md:grid-cols-2">
                       <div>
-                        <p className="font-semibold text-brand-900 dark:text-white">Owner</p>
-                        <p>{registration.owner_name || 'Not captured yet'}</p>
+                        <p className="font-semibold text-brand-900 dark:text-white">{isSw ? 'Mmiliki' : 'Owner'}</p>
+                        <p>{registration.owner_name || (isSw ? 'Bado haijawekwa' : 'Not captured yet')}</p>
                         <p>{registration.owner_login_email || registration.owner_email}</p>
-                        <p>{registration.owner_phone || registration.phone || 'No phone provided'}</p>
+                        <p>{registration.owner_phone || registration.phone || (isSw ? 'Hakuna simu' : 'No phone provided')}</p>
                       </div>
                       <div>
-                        <p className="font-semibold text-brand-900 dark:text-white">Business details</p>
+                        <p className="font-semibold text-brand-900 dark:text-white">{isSw ? 'Taarifa za biashara' : 'Business details'}</p>
                         <p>{registration.owner_email}</p>
-                        <p>{registration.phone || 'No business phone provided'}</p>
-                        <p>{registration.address || 'No address provided'}</p>
+                        <p>{registration.phone || (isSw ? 'Hakuna simu ya biashara' : 'No business phone provided')}</p>
+                        <p>{registration.address || (isSw ? 'Hakuna anwani' : 'No address provided')}</p>
                       </div>
                     </div>
 
                     {registration.approval_notes && (
                       <div className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-600 dark:border-brand-700 dark:bg-brand-800/60 dark:text-brand-300">
-                        <span className="font-semibold text-brand-900 dark:text-white">Notes:</span> {registration.approval_notes}
+                        <span className="font-semibold text-brand-900 dark:text-white">{isSw ? 'Maelezo:' : 'Notes:'}</span> {registration.approval_notes}
                       </div>
                     )}
                   </div>
@@ -324,7 +347,7 @@ export default function ApprovalsPage() {
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-4 py-2.5 text-sm font-semibold text-white hover:bg-success/90 disabled:opacity-70"
                         >
                           <CheckCircleIcon className="h-5 w-5" />
-                          {activeId === registration.id ? 'Saving...' : 'Approve Registration'}
+                          {activeId === registration.id ? (isSw ? 'Inahifadhi...' : 'Saving...') : (isSw ? 'Kubali Usajili' : 'Approve Registration')}
                         </button>
                         <button
                           type="button"
@@ -333,7 +356,7 @@ export default function ApprovalsPage() {
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-danger px-4 py-2.5 text-sm font-semibold text-white hover:bg-danger/90 disabled:opacity-70"
                         >
                           <XCircleIcon className="h-5 w-5" />
-                          {activeId === registration.id ? 'Saving...' : 'Reject Registration'}
+                          {activeId === registration.id ? (isSw ? 'Inahifadhi...' : 'Saving...') : (isSw ? 'Kataa Usajili' : 'Reject Registration')}
                         </button>
                         <button
                           type="button"
@@ -342,7 +365,7 @@ export default function ApprovalsPage() {
                           className="inline-flex items-center justify-center gap-2 rounded-xl border border-danger/30 px-4 py-2.5 text-sm font-semibold text-danger hover:bg-danger/5 disabled:opacity-70"
                         >
                           <TrashIcon className="h-5 w-5" />
-                          {activeId === registration.id ? 'Deleting...' : 'Delete Registration'}
+                          {activeId === registration.id ? (isSw ? 'Inafuta...' : 'Deleting...') : (isSw ? 'Futa Usajili' : 'Delete Registration')}
                         </button>
                       </>
                     ) : (
@@ -350,10 +373,10 @@ export default function ApprovalsPage() {
                         <div className="rounded-2xl border border-border bg-white/60 px-4 py-3 text-sm text-brand-600 dark:bg-brand-900/60 dark:text-brand-300">
                           <div className="flex items-center gap-2 font-semibold text-brand-900 dark:text-white">
                             <ClockIcon className="h-4 w-4 text-primary" />
-                            Decision recorded
+                            {isSw ? 'Uamuzi umehifadhiwa' : 'Decision recorded'}
                           </div>
-                          <p className="mt-2">By: {registration.approved_by_email || 'Unknown admin'}</p>
-                          <p>{registration.approved_at ? formatDate(registration.approved_at) : 'No date recorded'}</p>
+                          <p className="mt-2">{isSw ? 'Na:' : 'By:'} {registration.approved_by_email || (isSw ? 'Admin asiyejulikana' : 'Unknown admin')}</p>
+                          <p>{registration.approved_at ? formatDate(registration.approved_at) : (isSw ? 'Hakuna tarehe' : 'No date recorded')}</p>
                         </div>
 
                         {registration.approval_status === 'approved' && registration.is_active && (
@@ -364,7 +387,7 @@ export default function ApprovalsPage() {
                             className="inline-flex items-center justify-center gap-2 rounded-xl bg-warning px-4 py-2.5 text-sm font-semibold text-white hover:bg-warning/90 disabled:opacity-70"
                           >
                             <NoSymbolIcon className="h-5 w-5" />
-                            {activeId === registration.id ? 'Saving...' : 'Restrict Access'}
+                            {activeId === registration.id ? (isSw ? 'Inahifadhi...' : 'Saving...') : (isSw ? 'Zuia Ufikiaji' : 'Restrict Access')}
                           </button>
                         )}
 
@@ -376,7 +399,7 @@ export default function ApprovalsPage() {
                             className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-4 py-2.5 text-sm font-semibold text-white hover:bg-success/90 disabled:opacity-70"
                           >
                             <ArrowPathIcon className="h-5 w-5" />
-                            {activeId === registration.id ? 'Saving...' : 'Restore Access'}
+                            {activeId === registration.id ? (isSw ? 'Inahifadhi...' : 'Saving...') : (isSw ? 'Rudisha Ufikiaji' : 'Restore Access')}
                           </button>
                         )}
 
@@ -388,7 +411,7 @@ export default function ApprovalsPage() {
                             className="inline-flex items-center justify-center gap-2 rounded-xl bg-success px-4 py-2.5 text-sm font-semibold text-white hover:bg-success/90 disabled:opacity-70"
                           >
                             <CheckCircleIcon className="h-5 w-5" />
-                            {activeId === registration.id ? 'Saving...' : 'Approve Instead'}
+                            {activeId === registration.id ? (isSw ? 'Inahifadhi...' : 'Saving...') : (isSw ? 'Kubali Badala yake' : 'Approve Instead')}
                           </button>
                         )}
 
@@ -399,7 +422,7 @@ export default function ApprovalsPage() {
                           className="inline-flex items-center justify-center gap-2 rounded-xl border border-danger/30 px-4 py-2.5 text-sm font-semibold text-danger hover:bg-danger/5 disabled:opacity-70"
                         >
                           <TrashIcon className="h-5 w-5" />
-                          {activeId === registration.id ? 'Deleting...' : 'Delete Landlord'}
+                          {activeId === registration.id ? (isSw ? 'Inafuta...' : 'Deleting...') : (isSw ? 'Futa Landlord' : 'Delete Landlord')}
                         </button>
                       </>
                     )}
@@ -417,8 +440,12 @@ export default function ApprovalsPage() {
           <div className="w-full max-w-xl rounded-3xl bg-white p-8 shadow-2xl dark:bg-brand-900">
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <h3 className="text-2xl font-bold text-brand-900 dark:text-white">Create Landlord Invite</h3>
-                <p className="mt-1 text-sm text-brand-500">Send a secure invite-only registration email to the landlord owner. In development, the direct link is also shown below.</p>
+                <h3 className="text-2xl font-bold text-brand-900 dark:text-white">{isSw ? 'Tengeneza Mualiko wa Landlord' : 'Create Landlord Invite'}</h3>
+                <p className="mt-1 text-sm text-brand-500">
+                  {isSw
+                    ? 'Tuma barua pepe salama ya mualiko wa usajili kwa mmiliki wa landlord. Kwenye development, kiungo cha moja kwa moja kinaonyeshwa hapa chini.'
+                    : 'Send a secure invite-only registration email to the landlord owner. In development, the direct link is also shown below.'}
+                </p>
               </div>
               <button onClick={closeInviteModal} className="rounded-full p-2 text-brand-400 hover:bg-brand-100 hover:text-brand-700 dark:hover:bg-brand-800 dark:hover:text-white">
                 <XMarkIcon className="h-5 w-5" />
@@ -427,7 +454,7 @@ export default function ApprovalsPage() {
 
             <form onSubmit={handleCreateInvite} className="space-y-5">
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Owner Email</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Barua Pepe ya Mmiliki' : 'Owner Email'}</label>
                 <input
                   type="email"
                   value={inviteForm.email}
@@ -438,7 +465,7 @@ export default function ApprovalsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">Owner Full Name</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{isSw ? 'Jina Kamili la Mmiliki' : 'Owner Full Name'}</label>
                 <input
                   value={inviteForm.full_name}
                   onChange={(e) => setInviteForm((current) => ({ ...current, full_name: e.target.value }))}
@@ -448,7 +475,7 @@ export default function ApprovalsPage() {
 
               {inviteLink && (
                 <div className="rounded-2xl border border-success/20 bg-success/5 p-4">
-                  <p className="text-sm font-semibold text-success">Development registration link</p>
+                  <p className="text-sm font-semibold text-success">{isSw ? 'Kiungo cha usajili (development)' : 'Development registration link'}</p>
                   <p className="mt-2 break-all text-sm text-brand-700 dark:text-brand-200">{inviteLink}</p>
                   <button
                     type="button"
@@ -456,7 +483,7 @@ export default function ApprovalsPage() {
                     className="mt-3 inline-flex items-center gap-2 rounded-lg bg-success px-3 py-2 text-sm font-semibold text-white hover:bg-success/90"
                   >
                     <ClipboardDocumentIcon className="h-4 w-4" />
-                    Copy Link
+                    {isSw ? 'Nakili Kiungo' : 'Copy Link'}
                   </button>
                 </div>
               )}
@@ -467,14 +494,14 @@ export default function ApprovalsPage() {
                   onClick={closeInviteModal}
                   className="rounded-xl px-5 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-100 dark:text-brand-300 dark:hover:bg-brand-800"
                 >
-                  Close
+                  {isSw ? 'Funga' : 'Close'}
                 </button>
                 <button
                   type="submit"
                   disabled={inviteSubmitting}
                   className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {inviteSubmitting ? 'Sending...' : 'Send Invitation Email'}
+                  {inviteSubmitting ? (isSw ? 'Inatuma...' : 'Sending...') : (isSw ? 'Tuma Barua ya Mualiko' : 'Send Invitation Email')}
                 </button>
               </div>
             </form>

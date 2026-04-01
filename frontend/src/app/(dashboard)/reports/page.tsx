@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 
 type ReportTab = 'overview' | 'occupancy' | 'overdue' | 'duesoon';
 
@@ -82,6 +83,8 @@ const escapeCsvValue = (value: unknown) => {
 };
 
 export default function ReportsPage() {
+  const { language } = useLanguage();
+  const isSw = language === 'sw';
   const [searchParams] = useSearchParams();
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,6 +93,15 @@ export default function ReportsPage() {
   const tabParam = getValidTab(searchParams.get('tab'));
   const [activeTab, setActiveTab] = useState<ReportTab>(tabParam);
   const [month, setMonth] = useState(new Date().toISOString().substring(0, 7));
+  const tabLabel = (tab: ReportTab) => {
+    if (isSw) {
+      if (tab === 'overview') return 'muhtasari';
+      if (tab === 'occupancy') return 'ujazaji';
+      if (tab === 'overdue') return 'imepitwa';
+      return 'inayokuja';
+    }
+    return tab === 'duesoon' ? 'due soon' : tab;
+  };
 
   useEffect(() => {
     setActiveTab(tabParam);
@@ -125,12 +137,12 @@ export default function ReportsPage() {
       const periodLabel = month || data.period;
 
       doc.setFontSize(18);
-      doc.text('LandlordPro Report', 14, 18);
+      doc.text(isSw ? 'Ripoti ya LandlordPro' : 'LandlordPro Report', 14, 18);
       doc.setFontSize(11);
       doc.setTextColor(90, 90, 90);
-      doc.text(`Report type: ${activeTab}`, 14, 26);
-      doc.text(`Period: ${periodLabel}`, 14, 32);
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 38);
+      doc.text(`${isSw ? 'Aina ya ripoti' : 'Report type'}: ${activeTab}`, 14, 26);
+      doc.text(`${isSw ? 'Kipindi' : 'Period'}: ${periodLabel}`, 14, 32);
+      doc.text(`${isSw ? 'Imetengenezwa' : 'Generated'}: ${new Date().toLocaleString()}`, 14, 38);
       doc.setDrawColor(226, 232, 240);
       doc.line(14, 42, pageWidth - 14, 42);
 
@@ -150,16 +162,16 @@ export default function ReportsPage() {
 
         doc.setFontSize(13);
         doc.setTextColor(20, 20, 20);
-        doc.text('Overview Summary', 14, 52);
+        doc.text(isSw ? 'Muhtasari wa Jumla' : 'Overview Summary', 14, 52);
         doc.setFontSize(11);
-        doc.text(`Properties: ${data.income_by_property.length}`, 14, 60);
-        doc.text(`Collected: ${formatCurrency(totalCollected)}`, 14, 66);
-        doc.text(`Expected: ${formatCurrency(totalExpected)}`, 80, 66);
-        doc.text(`Outstanding: ${formatCurrency(totalOutstanding)}`, 145, 66);
+        doc.text(`${isSw ? 'Mali' : 'Properties'}: ${data.income_by_property.length}`, 14, 60);
+        doc.text(`${isSw ? 'Iliyokusanywa' : 'Collected'}: ${formatCurrency(totalCollected)}`, 14, 66);
+        doc.text(`${isSw ? 'Inayotarajiwa' : 'Expected'}: ${formatCurrency(totalExpected)}`, 80, 66);
+        doc.text(`${isSw ? 'Salio' : 'Outstanding'}: ${formatCurrency(totalOutstanding)}`, 145, 66);
 
         autoTable(doc, {
           startY: 74,
-          head: [['Property', 'Collected', 'Expected', 'Outstanding', 'Payments']],
+          head: [[isSw ? 'Mali' : 'Property', isSw ? 'Iliyokusanywa' : 'Collected', isSw ? 'Inayotarajiwa' : 'Expected', isSw ? 'Salio' : 'Outstanding', isSw ? 'Malipo' : 'Payments']],
           body: data.income_by_property.map((property) => [
             property.name,
             formatCurrency(toNumber(property.total_collected)),
@@ -177,7 +189,7 @@ export default function ReportsPage() {
           startY: docWithTableState.lastAutoTable?.finalY
             ? docWithTableState.lastAutoTable.finalY + 12
             : 140,
-          head: [['Month', 'Collected', 'Expected', 'Transactions']],
+          head: [[isSw ? 'Mwezi' : 'Month', isSw ? 'Iliyokusanywa' : 'Collected', isSw ? 'Inayotarajiwa' : 'Expected', isSw ? 'Miamala' : 'Transactions']],
           body: data.monthly_trend.map((entry) => [
             entry.period_month,
             formatCurrency(toNumber(entry.collected)),
@@ -192,7 +204,7 @@ export default function ReportsPage() {
       if (activeTab === 'occupancy') {
         autoTable(doc, {
           startY: 52,
-          head: [['Property', 'Units', 'Occupied', 'Vacant', 'Maintenance', 'Occupancy %']],
+          head: [[isSw ? 'Mali' : 'Property', isSw ? 'Vyumba' : 'Units', isSw ? 'Vilivyokaliwa' : 'Occupied', isSw ? 'Vivyo wazi' : 'Vacant', isSw ? 'Matengenezo' : 'Maintenance', isSw ? 'Ujazaji %' : 'Occupancy %']],
           body: data.occupancy.map((property) => [
             property.name,
             String(property.total_units ?? property.actual_units ?? 0),
@@ -209,7 +221,7 @@ export default function ReportsPage() {
       if (activeTab === 'overdue') {
         autoTable(doc, {
           startY: 52,
-          head: [['Tenant', 'Property / Unit', 'Due Date', 'Days Late', 'Outstanding']],
+          head: [[isSw ? 'Mpangaji' : 'Tenant', isSw ? 'Mali / Chumba' : 'Property / Unit', isSw ? 'Tarehe ya Malipo' : 'Due Date', isSw ? 'Siku Zilizochelewa' : 'Days Late', isSw ? 'Salio' : 'Outstanding']],
           body: data.overdue_tenants.map((tenant) => [
             tenant.full_name,
             `${tenant.property_name} / ${tenant.unit_number}`,
@@ -225,7 +237,7 @@ export default function ReportsPage() {
       if (activeTab === 'duesoon') {
         autoTable(doc, {
           startY: 52,
-          head: [['Tenant', 'Property / Unit', 'Due Date', 'Days Remaining', 'Rent']],
+          head: [[isSw ? 'Mpangaji' : 'Tenant', isSw ? 'Mali / Chumba' : 'Property / Unit', isSw ? 'Tarehe ya Malipo' : 'Due Date', isSw ? 'Siku Zilizobaki' : 'Days Remaining', isSw ? 'Kodi' : 'Rent']],
           body: data.due_soon_tenants.map((tenant) => [
             tenant.full_name,
             `${tenant.property_name} / ${tenant.unit_number}`,
@@ -239,10 +251,10 @@ export default function ReportsPage() {
       }
 
       doc.save(getPdfFileName(activeTab, periodLabel));
-      toast.success('PDF report downloaded');
+      toast.success(isSw ? 'Ripoti ya PDF imepakuliwa' : 'PDF report downloaded');
     } catch (error) {
       console.error(error);
-      toast.error('Failed to export PDF report');
+      toast.error(isSw ? 'Imeshindikana kupakua ripoti ya PDF' : 'Failed to export PDF report');
     } finally {
       setExporting(false);
     }
@@ -250,7 +262,7 @@ export default function ReportsPage() {
 
   const handleExportOverviewCsv = () => {
     if (!data?.income_by_property?.length) {
-      toast.error('No overview records available to export');
+      toast.error(isSw ? 'Hakuna rekodi za muhtasari za kupakua' : 'No overview records available to export');
       return;
     }
 
@@ -258,11 +270,11 @@ export default function ReportsPage() {
       setExportingCsv(true);
 
       const headers = [
-        'Property Name',
-        'Total Collected',
-        'Total Expected',
-        'Total Outstanding',
-        'Payment Count',
+        isSw ? 'Jina la Mali' : 'Property Name',
+        isSw ? 'Jumla Iliyokusanywa' : 'Total Collected',
+        isSw ? 'Jumla Inayotarajiwa' : 'Total Expected',
+        isSw ? 'Jumla ya Salio' : 'Total Outstanding',
+        isSw ? 'Idadi ya Malipo' : 'Payment Count',
       ];
 
       const rows = data.income_by_property.map((property) => [
@@ -289,10 +301,10 @@ export default function ReportsPage() {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success('Overview CSV downloaded');
+      toast.success(isSw ? 'CSV ya muhtasari imepakuliwa' : 'Overview CSV downloaded');
     } catch (error) {
       console.error(error);
-      toast.error('Failed to export overview CSV');
+      toast.error(isSw ? 'Imeshindikana kupakua CSV ya muhtasari' : 'Failed to export overview CSV');
     } finally {
       setExportingCsv(false);
     }
@@ -306,9 +318,9 @@ export default function ReportsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-900 to-brand-600 dark:from-white dark:to-brand-300">
-            Analytics & Reports
+            {isSw ? 'Takwimu na Ripoti' : 'Analytics & Reports'}
           </h2>
-          <p className="text-sm text-brand-500">Comprehensive insights into your property portfolio</p>
+          <p className="text-sm text-brand-500">{isSw ? 'Uchambuzi kamili wa mali zako' : 'Comprehensive insights into your property portfolio'}</p>
         </div>
         <div className="flex gap-3">
           <input 
@@ -324,7 +336,7 @@ export default function ReportsPage() {
               className="flex items-center gap-2 bg-brand-50 hover:bg-brand-100 dark:bg-brand-800 dark:hover:bg-brand-700 text-brand-700 dark:text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
             >
               <DocumentArrowDownIcon className="h-5 w-5" />
-              {exportingCsv ? 'Exporting...' : 'Export CSV'}
+              {exportingCsv ? (isSw ? 'Inapakua...' : 'Exporting...') : (isSw ? 'Pakua CSV' : 'Export CSV')}
             </button>
           )}
           <button
@@ -333,7 +345,7 @@ export default function ReportsPage() {
             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
           >
             <DocumentArrowDownIcon className="h-5 w-5" />
-            {exporting ? 'Exporting...' : 'Export PDF'}
+            {exporting ? (isSw ? 'Inapakua...' : 'Exporting...') : (isSw ? 'Pakua PDF' : 'Export PDF')}
           </button>
         </div>
       </div>
@@ -350,7 +362,7 @@ export default function ReportsPage() {
                   : 'text-brand-500 hover:text-brand-700 dark:hover:text-brand-300'
               }`}
             >
-              {tab.replace('due', 'due ')}
+              {tabLabel(tab)}
             </button>
           ))}
         </div>
@@ -363,7 +375,7 @@ export default function ReportsPage() {
               <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-success/10 blur-2xl group-hover:bg-success/20 transition-all" />
               <div className="flex justify-between items-center mb-6 relative">
                 <h3 className="text-lg font-bold text-brand-900 dark:text-white flex items-center gap-2">
-                  <ArrowTrendingUpIcon className="h-5 w-5 text-success" /> Revenue by Property
+                  <ArrowTrendingUpIcon className="h-5 w-5 text-success" /> {isSw ? 'Mapato kwa Kila Mali' : 'Revenue by Property'}
                 </h3>
               </div>
               <div className="space-y-4 relative">
@@ -380,7 +392,7 @@ export default function ReportsPage() {
               <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-primary/10 blur-2xl group-hover:bg-primary/20 transition-all" />
               <div className="flex justify-between items-center mb-6 relative">
                 <h3 className="text-lg font-bold text-brand-900 dark:text-white flex items-center gap-2">
-                  <ChartBarIcon className="h-5 w-5 text-primary" /> 6-Month Trend
+                  <ChartBarIcon className="h-5 w-5 text-primary" /> {isSw ? 'Mwelekeo wa Miezi 6' : '6-Month Trend'}
                 </h3>
               </div>
               <div className="space-y-4 relative">
@@ -403,7 +415,7 @@ export default function ReportsPage() {
         {activeTab === 'occupancy' && (
           <div className="col-span-full glass-panel p-6 rounded-2xl">
             <h3 className="text-lg font-bold text-brand-900 dark:text-white flex items-center gap-2 mb-6">
-              <HomeModernIcon className="h-5 w-5 text-info" /> Property Occupancy Rates
+              <HomeModernIcon className="h-5 w-5 text-info" /> {isSw ? 'Viwango vya Ujazaji wa Mali' : 'Property Occupancy Rates'}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {data.occupancy.map((p: any) => (
@@ -411,12 +423,12 @@ export default function ReportsPage() {
                   <h4 className="font-bold text-brand-900 dark:text-white mb-2">{p.name}</h4>
                   <div className="flex items-end gap-2 mb-4">
                     <span className="text-3xl font-extrabold text-info">{p.occupancy_rate}%</span>
-                    <span className="text-sm font-medium text-brand-500 mb-1">Occupied</span>
+                    <span className="text-sm font-medium text-brand-500 mb-1">{isSw ? 'Imekaliwa' : 'Occupied'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-brand-500 font-medium">Units: <span className="text-brand-900 dark:text-white font-bold">{p.total_units}</span></span>
-                    <span className="text-success font-medium">Full: <span className="font-bold">{p.occupied}</span></span>
-                    <span className="text-brand-400 font-medium">Empty: <span className="font-bold">{p.vacant}</span></span>
+                    <span className="text-brand-500 font-medium">{isSw ? 'Vyumba' : 'Units'}: <span className="text-brand-900 dark:text-white font-bold">{p.total_units}</span></span>
+                    <span className="text-success font-medium">{isSw ? 'Vilivyokaliwa' : 'Full'}: <span className="font-bold">{p.occupied}</span></span>
+                    <span className="text-brand-400 font-medium">{isSw ? 'Vivyo wazi' : 'Empty'}: <span className="font-bold">{p.vacant}</span></span>
                   </div>
                 </div>
               ))}
@@ -427,18 +439,18 @@ export default function ReportsPage() {
         {activeTab === 'overdue' && (
           <div className="col-span-full glass-panel p-6 rounded-2xl">
             <h3 className="text-lg font-bold text-brand-900 dark:text-white flex items-center gap-2 mb-6">
-              <ExclamationTriangleIcon className="h-5 w-5 text-danger" /> Overdue Tenants
+              <ExclamationTriangleIcon className="h-5 w-5 text-danger" /> {isSw ? 'Wapangaji Waliozidisha Muda' : 'Overdue Tenants'}
             </h3>
             {data.overdue_tenants.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[760px]">
                   <thead>
                     <tr className="bg-brand-50/50 dark:bg-brand-800/50 border-b border-border/50 text-xs uppercase tracking-wider text-brand-500">
-                      <th className="px-4 py-3 font-semibold">Tenant</th>
-                      <th className="px-4 py-3 font-semibold">Property</th>
-                      <th className="px-4 py-3 font-semibold">Due Date</th>
-                      <th className="px-4 py-3 font-semibold text-right">Days Late</th>
-                      <th className="px-4 py-3 font-semibold text-right">Outstanding</th>
+                      <th className="px-4 py-3 font-semibold">{isSw ? 'Mpangaji' : 'Tenant'}</th>
+                      <th className="px-4 py-3 font-semibold">{isSw ? 'Mali' : 'Property'}</th>
+                      <th className="px-4 py-3 font-semibold">{isSw ? 'Tarehe ya Malipo' : 'Due Date'}</th>
+                      <th className="px-4 py-3 font-semibold text-right">{isSw ? 'Siku Zilizochelewa' : 'Days Late'}</th>
+                      <th className="px-4 py-3 font-semibold text-right">{isSw ? 'Salio' : 'Outstanding'}</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm text-brand-700 dark:text-brand-300 divide-y divide-border/50">
@@ -447,7 +459,7 @@ export default function ReportsPage() {
                         <td className="px-4 py-3 font-semibold text-brand-900 dark:text-white">{tenant.full_name}</td>
                         <td className="px-4 py-3">
                           {tenant.property_name}
-                          <span className="block text-xs text-brand-500">Unit {tenant.unit_number}</span>
+                          <span className="block text-xs text-brand-500">{isSw ? 'Chumba' : 'Unit'} {tenant.unit_number}</span>
                         </td>
                         <td className="px-4 py-3">{formatDate(tenant.next_due_date)}</td>
                         <td className="px-4 py-3 text-right font-semibold text-danger">{tenant.days_overdue}</td>
@@ -460,27 +472,29 @@ export default function ReportsPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-brand-500">No overdue tenants for this period.</p>
+              <p className="text-brand-500">{isSw ? 'Hakuna wapangaji waliochelewa katika kipindi hiki.' : 'No overdue tenants for this period.'}</p>
             )}
-            <p className="pt-2 text-center text-xs text-brand-500 md:hidden">&lt;- Scroll to see more -&gt;</p>
+            <p className="pt-2 text-center text-xs text-brand-500 md:hidden">
+              {isSw ? '<- Telezesha kuona zaidi ->' : '<- Scroll to see more ->'}
+            </p>
           </div>
         )}
 
         {activeTab === 'duesoon' && (
           <div className="col-span-full glass-panel p-6 rounded-2xl">
             <h3 className="text-lg font-bold text-brand-900 dark:text-white flex items-center gap-2 mb-6">
-              <ClockIcon className="h-5 w-5 text-warning" /> Due Soon Tenants
+              <ClockIcon className="h-5 w-5 text-warning" /> {isSw ? 'Wapangaji Wanaokaribia Malipo' : 'Due Soon Tenants'}
             </h3>
             {data.due_soon_tenants.length ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[760px]">
                   <thead>
                     <tr className="bg-brand-50/50 dark:bg-brand-800/50 border-b border-border/50 text-xs uppercase tracking-wider text-brand-500">
-                      <th className="px-4 py-3 font-semibold">Tenant</th>
-                      <th className="px-4 py-3 font-semibold">Property</th>
-                      <th className="px-4 py-3 font-semibold">Due Date</th>
-                      <th className="px-4 py-3 font-semibold text-right">Days Remaining</th>
-                      <th className="px-4 py-3 font-semibold text-right">Rent</th>
+                      <th className="px-4 py-3 font-semibold">{isSw ? 'Mpangaji' : 'Tenant'}</th>
+                      <th className="px-4 py-3 font-semibold">{isSw ? 'Mali' : 'Property'}</th>
+                      <th className="px-4 py-3 font-semibold">{isSw ? 'Tarehe ya Malipo' : 'Due Date'}</th>
+                      <th className="px-4 py-3 font-semibold text-right">{isSw ? 'Siku Zilizobaki' : 'Days Remaining'}</th>
+                      <th className="px-4 py-3 font-semibold text-right">{isSw ? 'Kodi' : 'Rent'}</th>
                     </tr>
                   </thead>
                   <tbody className="text-sm text-brand-700 dark:text-brand-300 divide-y divide-border/50">
@@ -489,7 +503,7 @@ export default function ReportsPage() {
                         <td className="px-4 py-3 font-semibold text-brand-900 dark:text-white">{tenant.full_name}</td>
                         <td className="px-4 py-3">
                           {tenant.property_name}
-                          <span className="block text-xs text-brand-500">Unit {tenant.unit_number}</span>
+                          <span className="block text-xs text-brand-500">{isSw ? 'Chumba' : 'Unit'} {tenant.unit_number}</span>
                         </td>
                         <td className="px-4 py-3">{formatDate(tenant.next_due_date)}</td>
                         <td className="px-4 py-3 text-right font-semibold text-warning">{tenant.days_until_due}</td>
@@ -502,9 +516,11 @@ export default function ReportsPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-brand-500">No tenants due soon for this period.</p>
+              <p className="text-brand-500">{isSw ? 'Hakuna wapangaji wanaokaribia malipo katika kipindi hiki.' : 'No tenants due soon for this period.'}</p>
             )}
-            <p className="pt-2 text-center text-xs text-brand-500 md:hidden">&lt;- Scroll to see more -&gt;</p>
+            <p className="pt-2 text-center text-xs text-brand-500 md:hidden">
+              {isSw ? '<- Telezesha kuona zaidi ->' : '<- Scroll to see more ->'}
+            </p>
           </div>
         )}
 

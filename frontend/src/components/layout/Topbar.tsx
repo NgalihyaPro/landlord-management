@@ -1,11 +1,10 @@
-import { BellIcon, BuildingOfficeIcon, Bars3Icon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { BellIcon, BuildingOfficeIcon, Bars3Icon } from '@heroicons/react/24/outline';
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/context/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { cachedGet } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/context/ThemeContext';
 
 type NotificationSummary = {
   unread: number;
@@ -19,7 +18,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const { pathname } = useLocation();
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const titleMap: Record<string, string> = {
@@ -89,14 +87,6 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             <span className="max-w-[180px] truncate font-medium">{user.organization_name}</span>
           </div>
         )}
-
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-lg text-brand-500 hover:text-primary hover:bg-brand-100 dark:hover:bg-brand-800 transition-colors shrink-0"
-          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-        </button>
 
         <LanguageSwitcher />
 

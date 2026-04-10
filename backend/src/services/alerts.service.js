@@ -5,7 +5,7 @@ const requiredAmountExpression = 'COALESCE(NULLIF(t.required_amount, 0), t.month
 
 async function runDailyAlerts() {
   const res = await pool.query(
-    `SELECT u.id, u.phone
+    `SELECT u.id, u.phone, u.organization_id
      FROM users u
      JOIN roles r ON r.id = u.role_id
      WHERE LOWER(r.name) = 'admin'
@@ -16,16 +16,16 @@ async function runDailyAlerts() {
 
   for (const landlord of res.rows) {
     try {
-      await checkOverdueRent(landlord.id, landlord.phone);
-      await checkUpcomingRent(landlord.id, landlord.phone);
-      await checkLeaseExpiry(landlord.id, landlord.phone);
+      await checkOverdueRent(landlord.organization_id, landlord.phone);
+      await checkUpcomingRent(landlord.organization_id, landlord.phone);
+      await checkLeaseExpiry(landlord.organization_id, landlord.phone);
     } catch (error) {
       console.error(`[SMS ALERTS] Failed for landlord ${landlord.id}:`, error);
     }
   }
 }
 
-async function checkOverdueRent(landlordId, landlordPhone) {
+async function checkOverdueRent(organizationId, landlordPhone) {
   const res = await pool.query(
     `SELECT
        t.full_name,
@@ -43,11 +43,11 @@ async function checkOverdueRent(landlordId, landlordPhone) {
       AND pay.organization_id = t.organization_id
       AND pay.payment_date >= DATE_TRUNC('month', CURRENT_DATE)
      WHERE t.is_active = TRUE
-       AND COALESCE(p.landlord_id, p.owner_id) = $1
+       AND t.organization_id = $1
        AND t.next_due_date < CURRENT_DATE
      GROUP BY t.id, t.full_name, t.phone, t.required_amount, t.monthly_rent, t.next_due_date, u.unit_number, p.name
      HAVING (${requiredAmountExpression} - COALESCE(SUM(pay.amount_paid), 0)) > 0`,
-    [landlordId]
+    [organizationId]
   );
 
   for (const row of res.rows) {
@@ -60,7 +60,7 @@ async function checkOverdueRent(landlordId, landlordPhone) {
   }
 }
 
-async function checkUpcomingRent(landlordId, landlordPhone) {
+async function checkUpcomingRent(organizationId, landlordPhone) {
   const res = await pool.query(
     `SELECT
        t.full_name,
@@ -72,9 +72,9 @@ async function checkUpcomingRent(landlordId, landlordPhone) {
      JOIN units u ON t.unit_id = u.id AND u.organization_id = t.organization_id
      JOIN properties p ON p.id = COALESCE(t.property_id, u.property_id) AND p.organization_id = t.organization_id
      WHERE t.is_active = TRUE
-       AND COALESCE(p.landlord_id, p.owner_id) = $1
+       AND t.organization_id = $1
        AND t.next_due_date = CURRENT_DATE + INTERVAL '3 days'`,
-    [landlordId]
+    [organizationId]
   );
 
   for (const row of res.rows) {
@@ -87,7 +87,7 @@ async function checkUpcomingRent(landlordId, landlordPhone) {
   }
 }
 
-async function checkLeaseExpiry(landlordId, landlordPhone) {
+async function checkLeaseExpiry(organizationId, landlordPhone) {
   const res = await pool.query(
     `SELECT
        t.full_name,
@@ -99,11 +99,11 @@ async function checkLeaseExpiry(landlordId, landlordPhone) {
      JOIN units u ON t.unit_id = u.id AND u.organization_id = t.organization_id
      JOIN properties p ON p.id = COALESCE(t.property_id, u.property_id) AND p.organization_id = t.organization_id
      WHERE t.is_active = TRUE
-       AND COALESCE(p.landlord_id, p.owner_id) = $1
+       AND t.organization_id = $1
        AND COALESCE(t.lease_end_date, t.lease_end) IS NOT NULL
        AND COALESCE(t.lease_end_date, t.lease_end) BETWEEN CURRENT_DATE
            AND CURRENT_DATE + INTERVAL '30 days'`,
-    [landlordId]
+    [organizationId]
   );
 
   for (const row of res.rows) {

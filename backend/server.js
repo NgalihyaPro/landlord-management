@@ -145,6 +145,16 @@ const createApp = () => {
     }
   });
 
+  app.get('/api/run-alerts', async (req, res) => {
+    try {
+      const { runDailyAlerts } = require('./src/services/alerts.service');
+      await runDailyAlerts();
+      res.json({ success: true, message: 'Daily alerts triggered successfully. Check your phone.' });
+    } catch (err) {
+      res.json({ success: false, error: err.message });
+    }
+  });
+
   app.use('/api/auth', authRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/properties', propertyRoutes);

@@ -1,4 +1,5 @@
 const { pool } = require('../database/db');
+const { sendSMS } = require('../services/sms.service');
 
 const DEFAULT_RENT_REMINDER_DAYS = 7;
 const DEFAULT_LEASE_REMINDER_DAYS = 30;
@@ -411,4 +412,20 @@ const markRead = async (req, res) => {
   }
 };
 
-module.exports = { getAll, markRead };
+const sendTestSMS = async (req, res) => {
+  const { phone, message } = req.body;
+
+  if (!phone || !message) {
+    return res.status(400).json({ error: 'phone and message are required.' });
+  }
+
+  const result = await sendSMS(phone, message);
+
+  if (result && result.skipped) {
+    return res.status(503).json({ error: result.reason });
+  }
+
+  res.json({ success: true, result });
+};
+
+module.exports = { getAll, markRead, sendTestSMS };

@@ -1,7 +1,9 @@
+const FALLBACK_PLATFORM_ADMIN_EMAIL = 'admin@landlordpro.com';
+
 const getPlatformAdminEmails = () =>
   [
     process.env.PLATFORM_ADMIN_EMAILS || '',
-    process.env.DEFAULT_ADMIN_EMAIL || '',
+    process.env.DEFAULT_ADMIN_EMAIL || FALLBACK_PLATFORM_ADMIN_EMAIL,
   ]
     .join(',')
     .split(',')

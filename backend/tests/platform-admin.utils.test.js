@@ -29,6 +29,32 @@ test('DEFAULT_ADMIN_EMAIL is treated as a platform admin fallback', () => {
   }
 });
 
+test('hardcoded seeded admin email remains a fallback when DEFAULT_ADMIN_EMAIL is unset', () => {
+  const previousPlatformAdmins = process.env.PLATFORM_ADMIN_EMAILS;
+  const previousDefaultAdmin = process.env.DEFAULT_ADMIN_EMAIL;
+
+  process.env.PLATFORM_ADMIN_EMAILS = '';
+  delete process.env.DEFAULT_ADMIN_EMAIL;
+
+  delete require.cache[require.resolve(utilsPath)];
+  const { getPlatformAdminEmails, isPlatformAdminEmail } = require(utilsPath);
+
+  assert.deepEqual(getPlatformAdminEmails(), ['admin@landlordpro.com']);
+  assert.equal(isPlatformAdminEmail('admin@landlordpro.com'), true);
+
+  if (previousPlatformAdmins === undefined) {
+    delete process.env.PLATFORM_ADMIN_EMAILS;
+  } else {
+    process.env.PLATFORM_ADMIN_EMAILS = previousPlatformAdmins;
+  }
+
+  if (previousDefaultAdmin === undefined) {
+    delete process.env.DEFAULT_ADMIN_EMAIL;
+  } else {
+    process.env.DEFAULT_ADMIN_EMAIL = previousDefaultAdmin;
+  }
+});
+
 test('PLATFORM_ADMIN_EMAILS and DEFAULT_ADMIN_EMAIL are combined case-insensitively', () => {
   const previousPlatformAdmins = process.env.PLATFORM_ADMIN_EMAILS;
   const previousDefaultAdmin = process.env.DEFAULT_ADMIN_EMAIL;

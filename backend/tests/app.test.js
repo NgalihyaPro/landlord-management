@@ -116,3 +116,31 @@ test('GET /api/unknown returns JSON 404 response', async () => {
     await server.close();
   }
 });
+
+test('GET /api/test-sms is not publicly exposed', async () => {
+  const server = await startTestServer();
+
+  try {
+    const response = await fetch(`${server.baseUrl}/api/test-sms`);
+    assert.equal(response.status, 404);
+
+    const payload = await response.json();
+    assert.equal(payload.error, 'Route not found.');
+  } finally {
+    await server.close();
+  }
+});
+
+test('GET /api/run-alerts is not publicly exposed', async () => {
+  const server = await startTestServer();
+
+  try {
+    const response = await fetch(`${server.baseUrl}/api/run-alerts`);
+    assert.equal(response.status, 404);
+
+    const payload = await response.json();
+    assert.equal(payload.error, 'Route not found.');
+  } finally {
+    await server.close();
+  }
+});

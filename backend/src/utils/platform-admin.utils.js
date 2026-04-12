@@ -1,5 +1,9 @@
 const getPlatformAdminEmails = () =>
-  (process.env.PLATFORM_ADMIN_EMAILS || '')
+  [
+    process.env.PLATFORM_ADMIN_EMAILS || '',
+    process.env.DEFAULT_ADMIN_EMAIL || '',
+  ]
+    .join(',')
     .split(',')
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);

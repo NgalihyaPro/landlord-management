@@ -40,16 +40,18 @@ const getCsrfContext = async (server) => {
   };
 };
 
-test('GET /api/health returns service metadata', async () => {
+test('GET /health returns the lightweight Render keepalive payload', async () => {
   const server = await startTestServer();
 
   try {
-    const response = await fetch(`${server.baseUrl}/api/health`);
+    const response = await fetch(`${server.baseUrl}/health`);
     assert.equal(response.status, 200);
 
     const payload = await response.json();
-    assert.equal(payload.status, 'ok');
-    assert.ok(payload.timestamp);
+    assert.deepEqual(payload, {
+      ok: true,
+      service: 'alive',
+    });
   } finally {
     await server.close();
   }

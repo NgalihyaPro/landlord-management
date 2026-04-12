@@ -30,7 +30,8 @@ const platformAdminRoutes = require('./src/routes/platform-admin.routes');
 const { autoUpdateTenantStatuses } = require('./src/controllers/tenant.controller');
 const { runDailyAlerts } = require('./src/services/alerts.service');
 
-const PORT = Number(process.env.PORT || 5000);
+const parsedPort = Number.parseInt(process.env.PORT ?? '5000', 10);
+const PORT = Number.isInteger(parsedPort) && parsedPort > 0 ? parsedPort : 5000;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -80,6 +81,13 @@ const createApp = () => {
     },
     credentials: true,
   }));
+
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      ok: true,
+      service: 'alive',
+    });
+  });
 
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,

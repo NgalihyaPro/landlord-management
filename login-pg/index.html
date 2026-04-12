@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LandlordPro - Login</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- Left Side: Login Form -->
+        <div class="left-side">
+            <div class="form-container">
+                <div class="hero-header">
+                    <h1>Welcome <span class="hero-accent">back!</span></h1>
+                    <p class="subtitle">The intelligent, modern property management system designed exclusively for proactive <strong>landlords</strong>.</p>
+                </div>
+                
+                <form class="login-form">
+                    <div class="input-group">
+                        <input type="text" placeholder="Username">
+                    </div>
+                    <div class="input-group">
+                        <input type="password" placeholder="Password">
+                        <i class="ph ph-eye-slash toggle-pw"></i>
+                    </div>
+                    
+                    <div class="forgot-password">
+                        <a href="#">Forgot Password?</a>
+                    </div>
+                    
+                    <button type="button" class="btn-login">Login</button>
+                </form>
+
+                <div class="support-box">
+                    <div class="support-section">
+                        <div class="support-icon support-icon-avatar">
+                            <img src="profile-account.png" alt="Account" class="support-avatar-img">
+                        </div>
+                        <div class="support-text">
+                            <strong>Having trouble logging in?</strong>
+                            <p>For password reset, account support, or access issues, please contact the System Administrator.</p>
+                        </div>
+                    </div>
+
+                    <div class="support-divider"></div>
+
+                    <div class="support-section">
+                        <div class="support-icon support-icon-avatar">
+                            <img src="man.png" alt="User" class="support-avatar-img">
+                        </div>
+                        <div class="support-text">
+                            <strong>Need an account?</strong>
+                            <p>New user registration is handled by the System Administrator. Please contact the administrator to create your account.</p>
+                        </div>
+                    </div>
+
+                    <div class="support-contact">
+                        <a href="https://wa.me/255713384932" class="contact-chip">
+                            <img src="whatsapp.png" alt="WhatsApp" class="contact-chip-icon">
+                            <span>+255 713 384 932</span>
+                        </a>
+                        <a href="mailto:alfredlucas753@gmail.com" class="contact-chip">
+                            <img src="email.png" alt="Email" class="contact-chip-icon">
+                            <span>alfredlucas753@gmail.com</span>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Right Side: Illustration Panel -->
+        <div class="right-side">
+            <div class="green-panel">
+                <div class="panel-badge">
+                    <img src="house-picture.jpg" alt="Property" class="panel-badge-img">
+                    <div class="panel-badge-text">
+                        <span class="panel-badge-name">LandlordPro</span>
+                        <span class="panel-badge-sub">Property Management</span>
+                    </div>
+                </div>
+                
+                <div class="illustration-area">
+                    <!-- Top Left Avatar -->
+                    <div class="avatar-top">
+                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Lucky&backgroundColor=transparent" alt="Avatar">
+                    </div>
+                    
+                    <!-- Bottom Right Avatar -->
+                    <div class="avatar-right">
+                        <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Luna&backgroundColor=transparent" alt="Avatar">
+                    </div>
+                    
+                    <!-- Floating Card -->
+                    <div class="floating-card">
+                        <div class="fc-title">Rent Collection</div>
+                        <div class="fc-subtitle">14 Properties</div>
+                        <div class="fc-bottom">
+                            <span class="fc-tag">Payments</span>
+                            <span class="fc-circle">92%</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Main House Photo -->
+                    <div class="main-illustration">
+                        <div class="house-ring-outer">
+                            <div class="house-ring-inner">
+                                <img src="house-picture.jpg" alt="Property" class="house-photo">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="illustration-text-area">
+                    <div class="slider-dots">
+                        <span class="dot"></span>
+                        <span class="dot active"></span>
+                        <span class="dot"></span>
+                    </div>
+                    <h2 class="green-panel-text">Manage your properties effortlessly with <strong>LandlordPro</strong></h2>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.querySelector('.toggle-pw').addEventListener('click', function() {
+            const passInput = this.previousElementSibling;
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                this.classList.replace('ph-eye-slash', 'ph-eye');
+            } else {
+                passInput.type = 'password';
+                this.classList.replace('ph-eye', 'ph-eye-slash');
+            }
+        });
+    </script>
+</body>
+</html>

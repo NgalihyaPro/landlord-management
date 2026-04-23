@@ -9,6 +9,8 @@ import manImage from '@/assets/login/man.png';
 import whatsappImage from '@/assets/login/whatsapp.png';
 import emailImage from '@/assets/login/email.png';
 import houseImage from '@/assets/login/house-picture.jpg';
+import avatarLuckyImage from '@/assets/login/avatar-lucky.svg';
+import avatarLunaImage from '@/assets/login/avatar-luna.svg';
 import './page.css';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -198,11 +200,11 @@ export default function LoginPage() {
 
             <div className="lp-illustration-area">
               <div className="lp-avatar-top">
-                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Lucky&backgroundColor=transparent" alt="Avatar" />
+                <img src={avatarLuckyImage} alt="Avatar" />
               </div>
 
               <div className="lp-avatar-right">
-                <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Luna&backgroundColor=transparent" alt="Avatar" />
+                <img src={avatarLunaImage} alt="Avatar" />
               </div>
 
               <div className="lp-floating-card">

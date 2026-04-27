@@ -28,18 +28,23 @@ const getTokenFromRequest = (req) => {
   return cookies[AUTH_COOKIE_NAME] || null;
 };
 
+// RENDER_EXTERNAL_URL is auto-set by Render. We need SameSite=None; Secure
+// for cross-origin cookies (Vercel frontend → Render backend) to be sent on
+// XHR/fetch requests. SameSite=Lax only allows cookies on top-level navigation.
+const IS_DEPLOYED = !!(process.env.RENDER_EXTERNAL_URL || process.env.NODE_ENV === 'production');
+
 const buildAuthCookieOptions = () => ({
   httpOnly: true,
-  sameSite: process.env.AUTH_COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax'),
-  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.AUTH_COOKIE_SAMESITE || (IS_DEPLOYED ? 'none' : 'lax'),
+  secure: IS_DEPLOYED,
   path: '/',
   maxAge: 1000 * 60 * 60 * 24 * 7,
 });
 
 const buildCsrfCookieOptions = () => ({
   httpOnly: false,
-  sameSite: process.env.AUTH_COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'none' : 'lax'),
-  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.AUTH_COOKIE_SAMESITE || (IS_DEPLOYED ? 'none' : 'lax'),
+  secure: IS_DEPLOYED,
   path: '/',
   maxAge: 1000 * 60 * 60 * 24 * 7,
 });

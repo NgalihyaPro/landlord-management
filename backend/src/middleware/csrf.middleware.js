@@ -1,5 +1,6 @@
 const {
   generateCsrfToken,
+  validateCsrfToken,
   getCsrfTokenFromRequest,
   setCsrfCookie,
 } = require('../utils/auth.utils');
@@ -26,8 +27,20 @@ const requireCsrf = (req, res, next) => {
   const cookieToken = getCsrfTokenFromRequest(req);
   const headerToken = req.headers['x-csrf-token'];
 
-  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+  if (!headerToken) {
     return res.status(403).json({ error: 'Invalid CSRF token.' });
+  }
+
+  if (cookieToken) {
+    // Same-origin / cookie available: double-submit cookie check
+    if (cookieToken !== headerToken) {
+      return res.status(403).json({ error: 'Invalid CSRF token.' });
+    }
+  } else {
+    // Cross-origin (cookie blocked by browser): validate HMAC signature
+    if (!validateCsrfToken(headerToken)) {
+      return res.status(403).json({ error: 'Invalid CSRF token.' });
+    }
   }
 
   return next();

@@ -71,7 +71,37 @@ const getCsrfTokenFromRequest = (req) => {
   return cookies[CSRF_COOKIE_NAME] || null;
 };
 
-const generateCsrfToken = () => crypto.randomBytes(32).toString('hex');
+const generateCsrfToken = () => {
+  const random = crypto.randomBytes(32).toString('hex');
+  const timestamp = Date.now().toString(36);
+  const payload = `${random}.${timestamp}`;
+  const sig = crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(payload)
+    .digest('hex');
+  return `${payload}.${sig}`;
+};
+
+const validateCsrfToken = (token) => {
+  if (!token) return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  const [random, timestamp, sig] = parts;
+  const payload = `${random}.${timestamp}`;
+  const expected = crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(payload)
+    .digest('hex');
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'))) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  const issuedAt = parseInt(timestamp, 36);
+  return Date.now() - issuedAt < 7 * 24 * 60 * 60 * 1000;
+};
 
 const createRequestId = () => crypto.randomUUID();
 
@@ -88,5 +118,6 @@ module.exports = {
   setCsrfCookie,
   clearCsrfCookie,
   generateCsrfToken,
+  validateCsrfToken,
   createRequestId,
 };

@@ -68,10 +68,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (userData: User) => {
     clearGetCache();
-    setUser(userData);
-    setLoading(false);
     prefetchGet('/dashboard');
-    navigate('/dashboard', { replace: true });
+    setUser(userData);
   };
 
   const logout = async () => {

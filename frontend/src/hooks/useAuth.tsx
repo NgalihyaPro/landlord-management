@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import api, { clearCsrfToken, clearGetCache, prefetchGet } from '../lib/api';
+import api, { clearCsrfToken, clearGetCache } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 
 interface User {
@@ -68,7 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (userData: User) => {
     clearGetCache();
-    prefetchGet('/dashboard');
     setUser(userData);
   };
 

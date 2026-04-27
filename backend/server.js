@@ -177,6 +177,18 @@ const createApp = () => {
   return app;
 };
 
+const selfPing = async () => {
+  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_PING_URL;
+  if (!baseUrl) return;
+  try {
+    const url = `${baseUrl.replace(/\/$/, '')}/health`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    console.log(`[ping] ${url} → ${res.status}`);
+  } catch (err) {
+    console.warn('[ping] Self-ping failed:', err.message);
+  }
+};
+
 const scheduleJobs = () => {
   if (scheduledJobs || process.env.DISABLE_CRON === 'true') {
     return;
@@ -200,6 +212,12 @@ const scheduleJobs = () => {
       console.error('[CRON] Daily SMS alerts failed:', error);
     }
   }, { timezone: 'Etc/UTC' });
+
+  // Keep Render free tier alive — ping every 14 minutes
+  if (IS_PRODUCTION) {
+    cron.schedule('*/14 * * * *', selfPing);
+  }
+
   scheduledJobs = true;
 };
 

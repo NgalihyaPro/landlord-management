@@ -45,15 +45,45 @@ if (IS_PRODUCTION && JWT_SECRET === 'your_super_secret_jwt_key_change_in_product
 
 let scheduledJobs = false;
 
-const getAllowedOrigins = () =>
-  (
-    process.env.FRONTEND_URLS ||
-    process.env.FRONTEND_URL ||
-    'http://localhost:3000,http://127.0.0.1:3000'
-  )
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+const normalizeOrigin = (value) => {
+  if (!value) return null;
+
+  try {
+    return new URL(value.trim()).origin.toLowerCase();
+  } catch {
+    return value.trim().replace(/\/+$/, '').toLowerCase() || null;
+  }
+};
+
+const getDefaultAllowedOrigins = () => {
+  if (IS_PRODUCTION) {
+    return [
+      'https://landlordpro.co.tz',
+      'https://www.landlordpro.co.tz',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ];
+  }
+
+  return [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ];
+};
+
+const getAllowedOrigins = () => {
+  const configuredOrigins = process.env.FRONTEND_URLS || process.env.FRONTEND_URL;
+  const source = configuredOrigins || getDefaultAllowedOrigins().join(',');
+
+  return Array.from(
+    new Set(
+      source
+        .split(',')
+        .map((origin) => normalizeOrigin(origin))
+        .filter(Boolean)
+    )
+  );
+};
 
 const createApp = () => {
   const app = express();
@@ -73,7 +103,9 @@ const createApp = () => {
   }));
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      const normalizedOrigin = normalizeOrigin(origin);
+
+      if (!origin || (normalizedOrigin && allowedOrigins.includes(normalizedOrigin))) {
         return callback(null, true);
       }
 

@@ -57,6 +57,27 @@ test('GET /health returns the lightweight Render keepalive payload', async () =>
   }
 });
 
+test('GET /api/auth/csrf-token allows the production website origin', async () => {
+  process.env.FRONTEND_URLS = 'https://www.landlordpro.co.tz/';
+
+  const server = await startTestServer();
+
+  try {
+    const response = await fetch(`${server.baseUrl}/api/auth/csrf-token`, {
+      headers: {
+        Origin: 'https://www.landlordpro.co.tz',
+      },
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('access-control-allow-origin'), 'https://www.landlordpro.co.tz');
+    assert.equal(response.headers.get('access-control-allow-credentials'), 'true');
+  } finally {
+    await server.close();
+    delete process.env.FRONTEND_URLS;
+  }
+});
+
 test('POST /api/auth/login rejects requests without a CSRF token', async () => {
   const server = await startTestServer();
 

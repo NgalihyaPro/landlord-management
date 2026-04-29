@@ -3,10 +3,19 @@ const { buildFrontendUrl } = require('../utils/frontend-url.utils');
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const RESET_PASSWORD_HOURS = Number(process.env.PASSWORD_RESET_HOURS || 1);
+const DEFAULT_ZEPTO_API_URL = 'https://api.zeptomail.com/v1.1/email';
+const DEFAULT_MAIL_TIMEOUT_MS = Number(process.env.EMAIL_REQUEST_TIMEOUT_MS || 15000);
 
 let transporterPromise;
 
+const isZeptoMailApiConfigured = () =>
+  Boolean(
+    process.env.ZEPTO_API_TOKEN &&
+      process.env.SMTP_FROM_EMAIL
+  );
+
 const isEmailConfigured = () =>
+  isZeptoMailApiConfigured() ||
   Boolean(
     process.env.SMTP_HOST &&
       process.env.SMTP_PORT &&
@@ -22,6 +31,11 @@ const getFromAddress = () => {
 
   return name ? `"${name}" <${email}>` : email;
 };
+
+const getFromPayload = () => ({
+  address: process.env.SMTP_FROM_EMAIL,
+  name: process.env.SMTP_FROM_NAME || process.env.APP_NAME || 'LandlordPro',
+});
 
 const getTransporter = async () => {
   if (!isEmailConfigured()) {
@@ -47,6 +61,41 @@ const getTransporter = async () => {
   return transporterPromise;
 };
 
+const sendViaZeptoMailApi = async ({ to, subject, html, text }) => {
+  const apiUrl = process.env.ZEPTO_API_URL || DEFAULT_ZEPTO_API_URL;
+  const payload = {
+    from: getFromPayload(),
+    to: [
+      {
+        email_address: {
+          address: to,
+        },
+      },
+    ],
+    subject,
+    htmlbody: html,
+    textbody: text,
+  };
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `zoho-enczapikey ${process.env.ZEPTO_API_TOKEN}`,
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(DEFAULT_MAIL_TIMEOUT_MS),
+  });
+
+  if (!response.ok) {
+    const rawBody = await response.text();
+    throw new Error(`ZeptoMail API request failed (${response.status}): ${rawBody}`);
+  }
+
+  return { delivered: true, skipped: false };
+};
+
 const sendMail = async ({ to, subject, html, text }) => {
   if (!isEmailConfigured()) {
     if (isEmailDeliveryRequired()) {
@@ -55,6 +104,10 @@ const sendMail = async ({ to, subject, html, text }) => {
 
     console.warn(`[mail:skipped] ${subject} -> ${to}`);
     return { delivered: false, skipped: true };
+  }
+
+  if (isZeptoMailApiConfigured()) {
+    return sendViaZeptoMailApi({ to, subject, html, text });
   }
 
   const transporter = await getTransporter();

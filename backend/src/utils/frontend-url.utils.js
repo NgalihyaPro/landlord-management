@@ -2,11 +2,11 @@ const getPrimaryFrontendUrl = () =>
   (
     process.env.FRONTEND_URL ||
     process.env.FRONTEND_URLS ||
-    'http://127.0.0.1:3000'
+    'http://localhost:5173'
   )
     .split(',')
     .map((value) => value.trim())
-    .find(Boolean) || 'http://127.0.0.1:3000';
+    .find(Boolean) || 'http://localhost:5173';
 
 const buildFrontendUrl = (path) => {
   const baseUrl = getPrimaryFrontendUrl().replace(/\/$/, '');

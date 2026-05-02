@@ -3,11 +3,22 @@ const fs = require('fs/promises');
 const path = require('path');
 require('dotenv').config();
 
+const getSslConfig = () => {
+  if (process.env.DB_SSL !== 'true') {
+    return false;
+  }
+
+  return {
+    rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+  };
+};
+
 const pool = new Pool(
   process.env.DATABASE_URL
     ? {
       connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
+      max: Number(process.env.DB_POOL_MAX || 10),
+      ssl: getSslConfig(),
     }
     : {
       host: process.env.DB_HOST || 'localhost',
@@ -15,10 +26,8 @@ const pool = new Pool(
       user: process.env.DB_USER || 'postgres',
       password: process.env.DB_PASSWORD || '',
       database: process.env.DB_NAME || 'landlord_db',
-      max: 10,
-      ssl: process.env.DB_SSL === 'true'
-        ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false' }
-        : false,
+      max: Number(process.env.DB_POOL_MAX || 10),
+      ssl: getSslConfig(),
     }
 );
 

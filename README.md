@@ -63,7 +63,7 @@ Important variables:
 - `DB_USER`
 - `DB_PASSWORD`
 - `DB_NAME`
-- `DATABASE_URL` (recommended on Render, alternative to DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME)
+- `DATABASE_URL` (recommended in production, alternative to DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME)
 - `JWT_SECRET`
 - `FRONTEND_URLS`
 - `AUTH_COOKIE_SAMESITE`
@@ -190,12 +190,12 @@ npm run build
 npm start
 ```
 
-### Render (Web Service) recommended commands
+### Coolify backend commands
 
 Build Command:
 
 ```bash
-npm install && npm run build
+npm ci && npm run build
 ```
 
 Start Command:

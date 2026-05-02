@@ -5,7 +5,7 @@ const configuredApiUrl = import.meta.env.VITE_API_URL;
 
 const getDefaultApiUrl = () => {
   if (configuredApiUrl) {
-    return configuredApiUrl;
+    return configuredApiUrl.replace(/\/+$/, '');
   }
 
   if (isProduction) {
@@ -16,7 +16,7 @@ const getDefaultApiUrl = () => {
     return `${window.location.protocol}//${window.location.hostname}:5001/api`;
   }
 
-  return 'http://127.0.0.1:5001/api';
+  return 'http://localhost:3000/api';
 };
 
 export const API_URL = getDefaultApiUrl();

@@ -40,7 +40,7 @@ const getCsrfContext = async (server) => {
   };
 };
 
-test('GET /health returns the lightweight Render keepalive payload', async () => {
+test('GET /health returns the lightweight liveness payload', async () => {
   const server = await startTestServer();
 
   try {

@@ -30,8 +30,9 @@ const platformAdminRoutes = require('./src/routes/platform-admin.routes');
 const { autoUpdateTenantStatuses } = require('./src/controllers/tenant.controller');
 const { runDailyAlerts } = require('./src/services/alerts.service');
 
-const parsedPort = Number.parseInt(process.env.PORT ?? '5000', 10);
-const PORT = Number.isInteger(parsedPort) && parsedPort > 0 ? parsedPort : 5000;
+const parsedPort = Number.parseInt(process.env.PORT ?? '3000', 10);
+const PORT = Number.isInteger(parsedPort) && parsedPort > 0 ? parsedPort : 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -60,13 +61,17 @@ const getDefaultAllowedOrigins = () => {
     return [
       'https://landlordpro.co.tz',
       'https://www.landlordpro.co.tz',
+      'http://localhost:5173',
       'http://localhost:3000',
+      'http://127.0.0.1:5173',
       'http://127.0.0.1:3000',
     ];
   }
 
   return [
+    'http://localhost:5173',
     'http://localhost:3000',
+    'http://127.0.0.1:5173',
     'http://127.0.0.1:3000',
   ];
 };
@@ -210,7 +215,7 @@ const createApp = () => {
 };
 
 const selfPing = async () => {
-  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.SELF_PING_URL;
+  const baseUrl = process.env.SELF_PING_URL;
   if (!baseUrl) return;
   try {
     const url = `${baseUrl.replace(/\/$/, '')}/health`;
@@ -245,8 +250,8 @@ const scheduleJobs = () => {
     }
   }, { timezone: 'Etc/UTC' });
 
-  // Keep Render free tier alive — ping every 14 minutes
-  if (IS_PRODUCTION) {
+  // Optional self-ping for hosts that need it.
+  if (IS_PRODUCTION && process.env.SELF_PING_URL) {
     cron.schedule('*/14 * * * *', selfPing);
   }
 
@@ -261,8 +266,9 @@ const start = async () => {
   scheduleJobs();
 
   const app = createApp();
-  return app.listen(PORT, () => {
-    console.log(`LandlordPro API running on http://localhost:${PORT}`);
+  return app.listen(PORT, HOST, () => {
+    console.log(`LandlordPro API listening on ${HOST}:${PORT}`);
+    console.log(`Public API base: ${process.env.API_PUBLIC_URL || `http://localhost:${PORT}/api`}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 };

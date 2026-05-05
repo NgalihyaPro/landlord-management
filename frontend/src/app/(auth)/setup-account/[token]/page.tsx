@@ -249,7 +249,7 @@ export default function SetupAccountPage() {
                   disabled={submitting}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-3 text-sm font-semibold text-brand-800 shadow-sm transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-brand-700 dark:bg-brand-950 dark:text-white dark:hover:bg-brand-900"
                 >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full border border-brand-200 text-sm font-black text-[#4285f4]">G</span>
+                  <img src="/google.png" alt="" className="h-5 w-5 object-contain" aria-hidden="true" />
                   {isSw ? 'Endelea na Google' : 'Continue with Google'}
                 </button>
               </form>

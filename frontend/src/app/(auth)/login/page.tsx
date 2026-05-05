@@ -154,7 +154,7 @@ export default function LoginPage() {
             </div>
 
             <button type="button" className="lp-btn-google" onClick={handleGoogleLogin}>
-              <span className="lp-google-mark">G</span>
+              <img src="/google.png" alt="" className="lp-google-mark" aria-hidden="true" />
               Continue with Google
             </button>
 

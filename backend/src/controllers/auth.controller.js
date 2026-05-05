@@ -24,6 +24,7 @@ const { issueCsrfToken } = require('../middleware/csrf.middleware');
 const hashInviteToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 const GOOGLE_INVITE_COOKIE_NAME = process.env.GOOGLE_INVITE_COOKIE_NAME || 'landlordpro_google_invite';
 const GOOGLE_OAUTH_SCOPES = ['openid', 'email', 'profile'];
+const GOOGLE_OAUTH_TIMEOUT_MS = Number(process.env.GOOGLE_OAUTH_TIMEOUT_MS || 15000);
 const PASSWORD_RESET_RESPONSE = {
   message: 'If an active account matches that email, a password reset link has been sent.',
 };
@@ -89,6 +90,8 @@ const getGoogleOAuthConfig = () => {
 
 const getGoogleProfile = async (code) => {
   const { clientId, clientSecret, callbackUrl } = getGoogleOAuthConfig();
+  const tokenController = new AbortController();
+  const tokenTimeout = setTimeout(() => tokenController.abort(), GOOGLE_OAUTH_TIMEOUT_MS);
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -99,18 +102,24 @@ const getGoogleProfile = async (code) => {
       redirect_uri: callbackUrl,
       grant_type: 'authorization_code',
     }),
+    signal: tokenController.signal,
   });
+  clearTimeout(tokenTimeout);
 
   if (!tokenResponse.ok) {
     throw new Error(`Google token exchange failed (${tokenResponse.status}).`);
   }
 
   const tokenData = await tokenResponse.json();
+  const profileController = new AbortController();
+  const profileTimeout = setTimeout(() => profileController.abort(), GOOGLE_OAUTH_TIMEOUT_MS);
   const profileResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
     headers: {
       Authorization: `Bearer ${tokenData.access_token}`,
     },
+    signal: profileController.signal,
   });
+  clearTimeout(profileTimeout);
 
   if (!profileResponse.ok) {
     throw new Error(`Google profile request failed (${profileResponse.status}).`);
@@ -368,11 +377,13 @@ const startGoogleAuth = async (req, res) => {
 };
 
 const googleCallback = async (req, res) => {
-  const state = readSignedPayload(req.query.state);
-  const mode = state?.mode || 'login';
-  const token = state?.token || null;
-
+  let mode = 'login';
+  let token = null;
   try {
+    const state = readSignedPayload(req.query.state);
+    mode = state?.mode || 'login';
+    token = state?.token || null;
+
     if (!state || !req.query.code) {
       return redirectWithGoogleError(res, 'Google sign-in request is invalid or expired.', token, mode);
     }

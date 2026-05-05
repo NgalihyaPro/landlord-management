@@ -6,6 +6,7 @@ const {
   ensureOrganizationDefaults,
   slugifyOrganizationName,
 } = require('../utils/organization.utils');
+const { buildFrontendUrl } = require('../utils/frontend-url.utils');
 const {
   clearAuthCookie,
   setAuthCookie,

@@ -21,6 +21,15 @@ const getDefaultApiUrl = () => {
 
 export const API_URL = getDefaultApiUrl();
 
+export function getGoogleAuthUrl(mode: 'login' | 'staff_setup' | 'owner_register' = 'login', token?: string) {
+  const params = new URLSearchParams({ mode });
+  if (token) {
+    params.set('token', token);
+  }
+
+  return `${API_URL}/auth/google?${params.toString()}`;
+}
+
 type CacheEntry<T = unknown> = {
   data?: T;
   expiresAt: number;

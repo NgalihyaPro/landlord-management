@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import api, { getApiErrorMessage } from '@/lib/api';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import api, { getApiErrorMessage, getGoogleAuthUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import {
   EyeIcon,
@@ -25,6 +25,7 @@ export default function SetupAccountPage() {
   const { language } = useLanguage();
   const isSw = language === 'sw';
   const { token } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login } = useAuth();
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
@@ -41,6 +42,12 @@ export default function SetupAccountPage() {
   });
 
   useEffect(() => {
+    const googleError = searchParams.get('google_error');
+    if (googleError) {
+      setErrorMessage(googleError);
+      toast.error(googleError);
+    }
+
     const loadInvitation = async () => {
       try {
         const { data } = await api.get<InvitationDetails>(`/auth/setup-account/${token}`);
@@ -64,7 +71,7 @@ export default function SetupAccountPage() {
     }
 
     loadInvitation();
-  }, [token]);
+  }, [token, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +108,11 @@ export default function SetupAccountPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleGoogleSetup = () => {
+    if (!token) return;
+    window.location.href = getGoogleAuthUrl('staff_setup', token);
   };
 
   if (loading) {
@@ -223,6 +235,22 @@ export default function SetupAccountPage() {
                   className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {submitting ? (isSw ? 'Inakamilisha akaunti...' : 'Setting up account...') : (isSw ? 'Kamilisha Usanidi wa Akaunti' : 'Complete Account Setup')}
+                </button>
+
+                <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-brand-400">
+                  <span className="h-px flex-1 bg-brand-200 dark:bg-brand-700" />
+                  {isSw ? 'au' : 'or'}
+                  <span className="h-px flex-1 bg-brand-200 dark:bg-brand-700" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSetup}
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-3 text-sm font-semibold text-brand-800 shadow-sm transition hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-70 dark:border-brand-700 dark:bg-brand-950 dark:text-white dark:hover:bg-brand-900"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full border border-brand-200 text-sm font-black text-[#4285f4]">G</span>
+                  {isSw ? 'Endelea na Google' : 'Continue with Google'}
                 </button>
               </form>
             </>

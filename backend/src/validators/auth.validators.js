@@ -59,6 +59,18 @@ const registerOwnerFromInviteValidation = [
   body('business_address').optional({ values: 'falsy' }).trim().isLength({ max: 255 }),
 ];
 
+const registerOwnerFromGoogleInviteValidation = [
+  body('token')
+    .trim()
+    .isLength({ min: 32, max: 256 })
+    .withMessage('Registration invite token is invalid.'),
+  body('full_name').trim().notEmpty().withMessage('Full name is required.').isLength({ max: 120 }),
+  body('business_name').trim().notEmpty().withMessage('Business name is required.').isLength({ max: 160 }),
+  body('phone').optional({ values: 'falsy' }).trim().isLength({ max: 40 }),
+  body('business_phone').optional({ values: 'falsy' }).trim().isLength({ max: 40 }),
+  body('business_address').optional({ values: 'falsy' }).trim().isLength({ max: 255 }),
+];
+
 const setupAccountValidation = [
   body('token')
     .trim()
@@ -114,6 +126,7 @@ module.exports = {
   invitationDetailsValidation,
   ownerRegistrationInviteValidation,
   registerOwnerFromInviteValidation,
+  registerOwnerFromGoogleInviteValidation,
   setupAccountValidation,
   resetPasswordValidation,
   changePasswordValidation,

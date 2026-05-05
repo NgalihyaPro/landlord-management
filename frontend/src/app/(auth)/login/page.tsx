@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import api, { getApiErrorMessage } from '@/lib/api';
+import api, { getApiErrorMessage, getGoogleAuthUrl } from '@/lib/api';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
 import profileAccountImage from '@/assets/login/profile-account.png';
@@ -21,6 +21,7 @@ export default function LoginPage() {
   const { t } = useLanguage();
   const tx = t('auth.login');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,8 +29,20 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [capsLockOn, setCapsLockOn] = useState(false);
 
+  useEffect(() => {
+    const googleError = searchParams.get('google_error');
+    if (googleError) {
+      setErrorMessage(googleError);
+      toast.error(googleError);
+    }
+  }, [searchParams]);
+
   const handleForgotPassword = () => {
     navigate('/forgot-password');
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = getGoogleAuthUrl('login');
   };
 
   const clearErrors = () => {
@@ -135,6 +148,15 @@ export default function LoginPage() {
                 {loading ? tx.signing_in : tx.login_button}
               </button>
             </form>
+
+            <div className="lp-auth-divider">
+              <span>or</span>
+            </div>
+
+            <button type="button" className="lp-btn-google" onClick={handleGoogleLogin}>
+              <span className="lp-google-mark">G</span>
+              Continue with Google
+            </button>
 
             {!isProduction && (
               <div className="lp-dev-access">

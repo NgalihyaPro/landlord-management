@@ -10,6 +10,8 @@ const {
   clearAuthCookie,
   setAuthCookie,
   clearCsrfCookie,
+  parseCookies,
+  buildAuthCookieOptions,
 } = require('../utils/auth.utils');
 const { isPlatformAdminEmail } = require('../utils/platform-admin.utils');
 const {
@@ -20,8 +22,138 @@ const {
 const { issueCsrfToken } = require('../middleware/csrf.middleware');
 
 const hashInviteToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const GOOGLE_INVITE_COOKIE_NAME = process.env.GOOGLE_INVITE_COOKIE_NAME || 'landlordpro_google_invite';
+const GOOGLE_OAUTH_SCOPES = ['openid', 'email', 'profile'];
 const PASSWORD_RESET_RESPONSE = {
   message: 'If an active account matches that email, a password reset link has been sent.',
+};
+
+const base64UrlEncode = (value) =>
+  Buffer.from(JSON.stringify(value)).toString('base64url');
+
+const base64UrlDecode = (value) =>
+  JSON.parse(Buffer.from(value, 'base64url').toString('utf8'));
+
+const signPayload = (payload) =>
+  crypto
+    .createHmac('sha256', process.env.JWT_SECRET)
+    .update(payload)
+    .digest('base64url');
+
+const createSignedPayload = (payload) => {
+  const encoded = base64UrlEncode(payload);
+  return `${encoded}.${signPayload(encoded)}`;
+};
+
+const readSignedPayload = (signedValue) => {
+  if (!signedValue) return null;
+  const [encoded, signature] = signedValue.split('.');
+  if (!encoded || !signature) return null;
+
+  const expected = signPayload(encoded);
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const payload = base64UrlDecode(encoded);
+  if (payload.exp && Date.now() > payload.exp) {
+    return null;
+  }
+
+  return payload;
+};
+
+const createGoogleState = ({ mode, token }) =>
+  createSignedPayload({
+    mode,
+    token: token || null,
+    nonce: crypto.randomBytes(16).toString('hex'),
+    exp: Date.now() + 10 * 60 * 1000,
+  });
+
+const getGoogleOAuthConfig = () => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const callbackUrl = process.env.GOOGLE_CALLBACK_URL || `${process.env.API_PUBLIC_URL?.replace(/\/api\/?$/, '') || ''}/api/auth/google/callback`;
+
+  if (!clientId || !clientSecret || !callbackUrl) {
+    throw new Error('Google sign-in is not configured.');
+  }
+
+  return { clientId, clientSecret, callbackUrl };
+};
+
+const getGoogleProfile = async (code) => {
+  const { clientId, clientSecret, callbackUrl } = getGoogleOAuthConfig();
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: callbackUrl,
+      grant_type: 'authorization_code',
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error(`Google token exchange failed (${tokenResponse.status}).`);
+  }
+
+  const tokenData = await tokenResponse.json();
+  const profileResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+    },
+  });
+
+  if (!profileResponse.ok) {
+    throw new Error(`Google profile request failed (${profileResponse.status}).`);
+  }
+
+  const profile = await profileResponse.json();
+  if (!profile.email || !profile.email_verified || !profile.sub) {
+    throw new Error('Google account email could not be verified.');
+  }
+
+  return {
+    sub: profile.sub,
+    email: profile.email.trim().toLowerCase(),
+    fullName: profile.name || profile.email,
+  };
+};
+
+const redirectWithGoogleError = (res, message, token, mode = 'login') => {
+  const path = mode === 'owner_register' && token ? `/register/${token}` : mode === 'staff_setup' && token ? `/setup-account/${token}` : '/login';
+  const url = buildFrontendUrl(`${path}?google_error=${encodeURIComponent(message)}`);
+  return res.redirect(url);
+};
+
+const setGoogleInviteCookie = (res, payload) => {
+  res.cookie(GOOGLE_INVITE_COOKIE_NAME, createSignedPayload({
+    ...payload,
+    exp: Date.now() + 15 * 60 * 1000,
+  }), {
+    ...buildAuthCookieOptions(),
+    maxAge: 15 * 60 * 1000,
+  });
+};
+
+const clearGoogleInviteCookie = (res) => {
+  res.clearCookie(GOOGLE_INVITE_COOKIE_NAME, {
+    ...buildAuthCookieOptions(),
+    expires: new Date(0),
+  });
+};
+
+const getGoogleInviteClaim = (req) => {
+  const cookies = parseCookies(req.headers.cookie);
+  return readSignedPayload(cookies[GOOGLE_INVITE_COOKIE_NAME]);
 };
 
 const signAuthToken = (user) =>
@@ -83,6 +215,45 @@ const getPasswordResetByToken = async (tokenHash) => {
   );
 
   return rows[0];
+};
+
+const getLoginUserByEmail = async (email) => {
+  const [rows] = await pool.execute(
+    `SELECT u.*, r.name as role_name, org.name as organization_name, org.is_active as organization_active,
+            org.approval_status, org.approval_notes
+     FROM users u
+     JOIN roles r ON u.role_id = r.id
+     JOIN organizations org ON u.organization_id = org.id
+     WHERE u.email = ?`,
+    [email.trim().toLowerCase()]
+  );
+
+  return rows[0] || null;
+};
+
+const assertUserCanSignIn = (user) => {
+  if (!user) {
+    return 'No active account is linked to this Google email.';
+  }
+  if (user.approval_status === 'pending') {
+    return 'Your landlord account is waiting for administrator approval.';
+  }
+  if (user.approval_status === 'rejected') {
+    return user.approval_notes
+      ? `Registration was not approved: ${user.approval_notes}`
+      : 'Your landlord account registration was not approved.';
+  }
+  if (!user.organization_active) {
+    return 'This landlord account is inactive.';
+  }
+  if (user.invite_token_hash && !user.password_set_at && !user.google_linked_at) {
+    return 'Account setup required. Use your invitation link first.';
+  }
+  if (!user.is_active) {
+    return 'Your account is disabled. Please contact the landlord owner.';
+  }
+
+  return null;
 };
 
 const registerOwner = async (req, res) => {
@@ -164,6 +335,233 @@ const registerOwner = async (req, res) => {
     }
     console.error(err);
     res.status(500).json({ error: 'Registration failed.' });
+  } finally {
+    conn.release();
+  }
+};
+
+const startGoogleAuth = async (req, res) => {
+  try {
+    const { clientId, callbackUrl } = getGoogleOAuthConfig();
+    const mode = ['login', 'staff_setup', 'owner_register'].includes(req.query.mode)
+      ? req.query.mode
+      : 'login';
+    const token = req.query.token || null;
+
+    if ((mode === 'staff_setup' || mode === 'owner_register') && !token) {
+      return res.status(400).json({ error: 'Invitation token is required for Google registration.' });
+    }
+
+    const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    url.searchParams.set('client_id', clientId);
+    url.searchParams.set('redirect_uri', callbackUrl);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', GOOGLE_OAUTH_SCOPES.join(' '));
+    url.searchParams.set('state', createGoogleState({ mode, token }));
+    url.searchParams.set('prompt', 'select_account');
+
+    return res.redirect(url.toString());
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message === 'Google sign-in is not configured.' ? error.message : 'Failed to start Google sign-in.' });
+  }
+};
+
+const googleCallback = async (req, res) => {
+  const state = readSignedPayload(req.query.state);
+  const mode = state?.mode || 'login';
+  const token = state?.token || null;
+
+  try {
+    if (!state || !req.query.code) {
+      return redirectWithGoogleError(res, 'Google sign-in request is invalid or expired.', token, mode);
+    }
+
+    const profile = await getGoogleProfile(req.query.code);
+
+    if (mode === 'staff_setup') {
+      const tokenHash = hashInviteToken(token);
+      const [rows] = await pool.execute(
+        `SELECT u.id, u.email, u.invite_expires_at, u.password_set_at, u.google_linked_at, org.is_active as organization_active
+         FROM users u
+         JOIN organizations org ON u.organization_id = org.id
+         WHERE u.invite_token_hash = ?`,
+        [tokenHash]
+      );
+      const invitation = rows[0];
+
+      if (!invitation || !invitation.organization_active) {
+        return redirectWithGoogleError(res, 'Invitation link is invalid.', token, mode);
+      }
+      if (invitation.password_set_at || invitation.google_linked_at) {
+        return redirectWithGoogleError(res, 'This invitation has already been used.', token, mode);
+      }
+      if (!invitation.invite_expires_at || new Date(invitation.invite_expires_at) < new Date()) {
+        return redirectWithGoogleError(res, 'This invitation link has expired.', token, mode);
+      }
+      if (profile.email !== invitation.email.trim().toLowerCase()) {
+        return redirectWithGoogleError(res, 'Google email must match the invited email address.', token, mode);
+      }
+
+      await pool.execute(
+        `UPDATE users
+         SET is_active = TRUE, password_set_at = NOW(), google_sub = ?, google_email = ?, google_linked_at = NOW(),
+             invite_token_hash = NULL, invite_expires_at = NULL, updated_at = NOW()
+         WHERE id = ?`,
+        [profile.sub, profile.email, invitation.id]
+      );
+
+      const user = await getUserById(invitation.id);
+      setAuthCookie(res, signAuthToken(user));
+      issueCsrfToken(req, res);
+      return res.redirect(buildFrontendUrl('/dashboard?google_auth=success'));
+    }
+
+    if (mode === 'owner_register') {
+      const invite = await getOwnerInviteByToken(hashInviteToken(token));
+      if (!invite) {
+        return redirectWithGoogleError(res, 'Registration invite link is invalid.', token, mode);
+      }
+      if (invite.used_at) {
+        return redirectWithGoogleError(res, 'This registration invite has already been used.', token, mode);
+      }
+      if (new Date(invite.expires_at) < new Date()) {
+        return redirectWithGoogleError(res, 'This registration invite has expired.', token, mode);
+      }
+      if (profile.email !== invite.email.trim().toLowerCase()) {
+        return redirectWithGoogleError(res, 'Google email must match the invited email address.', token, mode);
+      }
+
+      setGoogleInviteCookie(res, {
+        mode,
+        token,
+        email: profile.email,
+        googleSub: profile.sub,
+        fullName: profile.fullName,
+      });
+      return res.redirect(buildFrontendUrl(`/register/${token}?google_verified=1`));
+    }
+
+    const user = await getLoginUserByEmail(profile.email);
+    const signInError = assertUserCanSignIn(user);
+    if (signInError) {
+      return redirectWithGoogleError(res, signInError, token, mode);
+    }
+
+    if (!user.google_sub) {
+      await pool.execute(
+        'UPDATE users SET google_sub = ?, google_email = ?, google_linked_at = NOW(), updated_at = NOW() WHERE id = ?',
+        [profile.sub, profile.email, user.id]
+      );
+    } else if (user.google_sub !== profile.sub) {
+      return redirectWithGoogleError(res, 'This email is already linked to a different Google account.', token, mode);
+    }
+
+    await pool.execute('UPDATE users SET last_login = NOW() WHERE id = ?', [user.id]);
+    setAuthCookie(res, signAuthToken({
+      id: user.id,
+      email: user.email,
+      role: user.role_name,
+      organization_id: user.organization_id,
+    }));
+    issueCsrfToken(req, res);
+    return res.redirect(buildFrontendUrl('/dashboard?google_auth=success'));
+  } catch (error) {
+    console.error(error);
+    return redirectWithGoogleError(res, 'Google sign-in failed. Please try again.', token, mode);
+  }
+};
+
+const registerOwnerFromGoogleInvite = async (req, res) => {
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    const claim = getGoogleInviteClaim(req);
+    if (!claim || claim.mode !== 'owner_register' || claim.token !== req.body.token) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Google registration verification is missing or expired.' });
+    }
+
+    const invite = await getOwnerInviteByToken(hashInviteToken(req.body.token));
+    if (!invite || invite.used_at || new Date(invite.expires_at) < new Date()) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Registration invite link is invalid or expired.' });
+    }
+
+    const normalizedEmail = invite.email.trim().toLowerCase();
+    if (claim.email !== normalizedEmail) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Google email must match the invited email address.' });
+    }
+
+    const {
+      full_name,
+      business_name,
+      phone,
+      business_phone,
+      business_address,
+    } = req.body;
+
+    if (!full_name || !business_name) {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Full name and business name are required.' });
+    }
+
+    const slugBase = slugifyOrganizationName(business_name);
+    const slug = `${slugBase}-${Date.now().toString().slice(-6)}`;
+
+    const [organizationResult] = await conn.execute(
+      `INSERT INTO organizations (
+        name, slug, owner_email, phone, address, is_active, approval_status, approved_at, approved_by_email
+      ) VALUES (?, ?, ?, ?, ?, TRUE, 'approved', NOW(), ?)`,
+      [
+        business_name.trim(),
+        slug,
+        normalizedEmail,
+        business_phone || phone || null,
+        business_address || null,
+        invite.invited_by_email || 'platform-admin',
+      ]
+    );
+
+    const temporaryHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+    const [userResult] = await conn.execute(
+      `INSERT INTO users (
+        organization_id, role_id, full_name, email, phone, password_hash, is_active, password_set_at,
+        google_sub, google_email, google_linked_at
+      ) VALUES (?, 1, ?, ?, ?, ?, TRUE, NOW(), ?, ?, NOW())`,
+      [organizationResult.insertId, full_name.trim(), normalizedEmail, phone || business_phone || null, temporaryHash, claim.googleSub, claim.email]
+    );
+
+    await ensureOrganizationDefaults(conn, organizationResult.insertId, {
+      business_name: business_name.trim(),
+      business_phone: business_phone || phone || '',
+      business_email: normalizedEmail,
+      business_address: business_address || '',
+    });
+
+    await conn.execute('UPDATE owner_registration_invites SET used_at = NOW() WHERE id = ?', [invite.id]);
+    await conn.execute(
+      'INSERT INTO audit_logs (organization_id, user_id, action, table_name, record_id) VALUES (?,?,?,?,?)',
+      [organizationResult.insertId, userResult.insertId, 'REGISTER_OWNER_FROM_GOOGLE_INVITE', 'users', userResult.insertId]
+    );
+
+    await conn.commit();
+    clearGoogleInviteCookie(res);
+
+    const user = await getUserById(userResult.insertId);
+    setAuthCookie(res, signAuthToken(user));
+    issueCsrfToken(req, res);
+    res.status(201).json({
+      message: 'Landlord account created successfully with Google.',
+      user,
+    });
+  } catch (error) {
+    await conn.rollback();
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create landlord account with Google.' });
   } finally {
     conn.release();
   }
@@ -714,7 +1112,10 @@ const changePassword = async (req, res) => {
 module.exports = {
   registerOwner,
   registerOwnerFromInvite,
+  registerOwnerFromGoogleInvite,
   getOwnerInviteDetails,
+  startGoogleAuth,
+  googleCallback,
   getCsrfToken,
   login,
   forgotPassword,

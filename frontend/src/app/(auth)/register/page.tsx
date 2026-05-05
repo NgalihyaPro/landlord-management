@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   BuildingOfficeIcon,
@@ -11,7 +11,7 @@ import {
   UserIcon,
   MapPinIcon,
 } from '@heroicons/react/24/outline';
-import api, { getApiErrorMessage } from '@/lib/api';
+import api, { getApiErrorMessage, getGoogleAuthUrl } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -24,12 +24,14 @@ type InviteDetails = {
 
 export default function RegisterPage() {
   const { token } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login } = useAuth();
   const { t } = useLanguage();
   const tx = t('auth.register');
   const [loading, setLoading] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(Boolean(token));
+  const googleVerified = searchParams.get('google_verified') === '1';
   const [invite, setInvite] = useState<InviteDetails | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -46,6 +48,12 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
+    const googleError = searchParams.get('google_error');
+    if (googleError) {
+      setErrorMessage(googleError);
+      toast.error(googleError);
+    }
+
     const loadInvite = async () => {
       if (!token) {
         setInviteLoading(false);
@@ -68,7 +76,7 @@ export default function RegisterPage() {
     };
 
     void loadInvite();
-  }, [token]);
+  }, [token, searchParams]);
 
   const updateField = (field: keyof typeof formData, value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -85,17 +93,17 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!formData.full_name || !formData.business_name || !formData.email || !formData.password) {
+    if (!formData.full_name || !formData.business_name || !formData.email || (!googleVerified && !formData.password)) {
       setErrorMessage(tx.required_fields);
       return;
     }
 
-    if (formData.password.length < 8) {
+    if (!googleVerified && formData.password.length < 8) {
       setErrorMessage(tx.password_length);
       return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
+    if (!googleVerified && formData.password !== formData.confirmPassword) {
       setErrorMessage(tx.password_mismatch);
       return;
     }
@@ -103,15 +111,19 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const { data } = await api.post('/auth/register/invite', {
+      const payload = {
         token,
         full_name: formData.full_name.trim(),
         phone: formData.phone.trim(),
         business_name: formData.business_name.trim(),
         business_phone: formData.business_phone.trim(),
         business_address: formData.business_address.trim(),
-        password: formData.password,
-      });
+      };
+
+      const { data } = await api.post(
+        googleVerified ? '/auth/register/invite/google' : '/auth/register/invite',
+        googleVerified ? payload : { ...payload, password: formData.password }
+      );
 
       toast.success(data.message || tx.success);
       if (data.user) {
@@ -127,6 +139,11 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleVerify = () => {
+    if (!token) return;
+    window.location.href = getGoogleAuthUrl('owner_register', token);
   };
 
   return (
@@ -196,6 +213,20 @@ export default function RegisterPage() {
             <div className="rounded-2xl border border-success/20 bg-success/5 px-4 py-3 text-sm text-brand-700 dark:text-brand-200">
               {tx.secure_link_for} <span className="font-semibold">{invite.email}</span>.
             </div>
+            {googleVerified ? (
+              <div className="rounded-2xl border border-info/20 bg-info/5 px-4 py-3 text-sm text-brand-700 dark:text-brand-200">
+                Google verified this invited email. Complete the business details to create the account without a password.
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleGoogleVerify}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-brand-200 bg-white px-4 py-3 text-sm font-semibold text-brand-800 shadow-sm transition hover:bg-brand-50 dark:border-brand-700 dark:bg-brand-950 dark:text-white dark:hover:bg-brand-900"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-brand-200 text-sm font-black text-[#4285f4]">G</span>
+                Continue with Google
+              </button>
+            )}
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.owner_name}</label>
@@ -281,6 +312,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {!googleVerified && (
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wide text-brand-500">{tx.password}</label>
@@ -324,6 +356,7 @@ export default function RegisterPage() {
                 </div>
               </div>
             </div>
+            )}
 
             {errorMessage && (
               <div className="rounded-xl border border-danger/20 bg-danger/5 px-4 py-3 text-sm font-medium text-danger">
@@ -336,7 +369,7 @@ export default function RegisterPage() {
               disabled={loading}
               className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {loading ? tx.creating : tx.create_button}
+              {loading ? tx.creating : googleVerified ? 'Create Account with Google' : tx.create_button}
             </button>
           </form>
           )}

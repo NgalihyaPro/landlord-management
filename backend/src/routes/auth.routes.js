@@ -2,7 +2,10 @@ const router = require('express').Router();
 const {
   registerOwner,
   registerOwnerFromInvite,
+  registerOwnerFromGoogleInvite,
   getOwnerInviteDetails,
+  startGoogleAuth,
+  googleCallback,
   getCsrfToken,
   login,
   forgotPassword,
@@ -24,6 +27,7 @@ const {
   invitationDetailsValidation,
   ownerRegistrationInviteValidation,
   registerOwnerFromInviteValidation,
+  registerOwnerFromGoogleInviteValidation,
   setupAccountValidation,
   resetPasswordValidation,
   changePasswordValidation,
@@ -31,9 +35,12 @@ const {
 } = require('../validators/auth.validators');
 
 router.get('/csrf-token', getCsrfToken);
+router.get('/google', startGoogleAuth);
+router.get('/google/callback', googleCallback);
 router.post('/register', registerOwnerValidation, validateRequest, registerOwner);
 router.get('/register/:token', ownerRegistrationInviteValidation, validateRequest, getOwnerInviteDetails);
 router.post('/register/invite', registerOwnerFromInviteValidation, validateRequest, registerOwnerFromInvite);
+router.post('/register/invite/google', registerOwnerFromGoogleInviteValidation, validateRequest, registerOwnerFromGoogleInvite);
 router.post('/login', loginValidation, validateRequest, login);
 router.post('/forgot-password', forgotPasswordValidation, validateRequest, forgotPassword);
 router.get('/reset-password/:token', invitationDetailsValidation, validateRequest, getResetPasswordDetails);
